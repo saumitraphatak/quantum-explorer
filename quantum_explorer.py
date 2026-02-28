@@ -16,6 +16,9 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from qutip import (sigmax, sigmay, sigmaz, basis, destroy,
+                   mesolve, Qobj, wigner, coherent, fock,
+                   thermal_dm, squeeze)
 
 # ─────────────────────────────────────────────
 # Page config
@@ -316,6 +319,101 @@ def simulate_measurements(p0: float, n: int) -> go.Figure:
 
 
 # ═══════════════════════════════════════════════════════════════
+# BLOCH SPHERE WITH TRAJECTORY  (used by Rabi + Decoherence pages)
+# ═══════════════════════════════════════════════════════════════
+
+def bloch_with_traj(sx, sy, sz, label="ψ(t)",
+                    color="#ff6b6b", end_color="#ffaa00",
+                    title="Bloch Sphere Trajectory"):
+    """
+    Plotly Bloch sphere showing a full time-evolution trajectory.
+    sx, sy, sz : 1-D arrays of ⟨X⟩, ⟨Y⟩, ⟨Z⟩ over time (from QuTiP mesolve).
+    Blue dot = initial state, coloured dot = final state.
+    """
+    fig = go.Figure()
+
+    u = np.linspace(0, 2 * np.pi, 50)
+    v = np.linspace(0, np.pi, 35)
+    fig.add_trace(go.Surface(
+        x=np.outer(np.cos(u), np.sin(v)),
+        y=np.outer(np.sin(u), np.sin(v)),
+        z=np.outer(np.ones(len(u)), np.cos(v)),
+        opacity=0.08,
+        colorscale=[[0, "rgba(120,100,255,0.05)"],
+                    [1, "rgba(180,160,255,0.15)"]],
+        showscale=False, hoverinfo="skip",
+    ))
+
+    t = np.linspace(0, 2 * np.pi, 200)
+    for xe, ye, ze in [(np.cos(t), np.sin(t), np.zeros_like(t)),
+                       (np.cos(t), np.zeros_like(t), np.sin(t)),
+                       (np.zeros_like(t), np.cos(t), np.sin(t))]:
+        fig.add_trace(go.Scatter3d(x=xe, y=ye, z=ze, mode="lines",
+            line=dict(color="rgba(160,150,220,0.25)", width=1),
+            hoverinfo="skip", showlegend=False))
+
+    ax_len = 1.3
+    for ax, ay, az in [([0,ax_len],[0,0],[0,0]), ([0,0],[0,ax_len],[0,0]),
+                       ([0,0],[0,0],[0,ax_len]), ([0,-ax_len],[0,0],[0,0]),
+                       ([0,0],[0,-ax_len],[0,0]), ([0,0],[0,0],[0,-ax_len])]:
+        fig.add_trace(go.Scatter3d(x=ax, y=ay, z=az, mode="lines",
+            line=dict(color="rgba(200,200,255,0.4)", width=2),
+            hoverinfo="skip", showlegend=False))
+
+    special = {"|0⟩":(0,0,1.18), "|1⟩":(0,0,-1.18),
+               "|+⟩":(1.18,0,0), "|-⟩":(-1.18,0,0),
+               "|i⟩":(0,1.18,0), "|-i⟩":(0,-1.18,0)}
+    fig.add_trace(go.Scatter3d(
+        x=[sv[0] for sv in special.values()],
+        y=[sv[1] for sv in special.values()],
+        z=[sv[2] for sv in special.values()],
+        mode="text", text=list(special.keys()),
+        textfont=dict(size=11, color="rgba(200,200,255,0.7)"),
+        hoverinfo="skip", showlegend=False,
+    ))
+
+    # Colour trajectory by time (fade from dim to bright)
+    n_pts = len(sx)
+    for i in range(0, n_pts - 1, max(1, n_pts // 120)):
+        alpha = 0.2 + 0.8 * i / n_pts
+        fig.add_trace(go.Scatter3d(
+            x=sx[i:i+2], y=sy[i:i+2], z=sz[i:i+2], mode="lines",
+            line=dict(color=color, width=4),
+            opacity=alpha, showlegend=False, hoverinfo="skip",
+        ))
+
+    fig.add_trace(go.Scatter3d(
+        x=[sx[0]], y=[sy[0]], z=[sz[0]], mode="markers",
+        marker=dict(size=10, color="#44aaff"), name="Initial state",
+    ))
+    fig.add_trace(go.Scatter3d(
+        x=[sx[-1]], y=[sy[-1]], z=[sz[-1]], mode="markers",
+        marker=dict(size=12, color=end_color), name="Final state",
+    ))
+
+    fig.update_layout(
+        title=dict(text=title, font=dict(color="#c8b8ff", size=14)),
+        paper_bgcolor="rgba(10,10,26,0)",
+        scene=dict(
+            bgcolor="rgba(10,10,30,0.95)",
+            xaxis=dict(title="X", showgrid=False, zeroline=False,
+                       tickfont=dict(color="#aaa"), titlefont=dict(color="#aaa"),
+                       backgroundcolor="rgba(0,0,0,0)"),
+            yaxis=dict(title="Y", showgrid=False, zeroline=False,
+                       tickfont=dict(color="#aaa"), titlefont=dict(color="#aaa"),
+                       backgroundcolor="rgba(0,0,0,0)"),
+            zaxis=dict(title="Z", showgrid=False, zeroline=False,
+                       tickfont=dict(color="#aaa"), titlefont=dict(color="#aaa"),
+                       backgroundcolor="rgba(0,0,0,0)"),
+            camera=dict(eye=dict(x=1.6, y=1.6, z=1.0)),
+        ),
+        legend=dict(font=dict(color="#ccc"), bgcolor="rgba(20,20,40,0.8)"),
+        margin=dict(l=0, r=0, t=40, b=0), height=500,
+    )
+    return fig
+
+
+# ═══════════════════════════════════════════════════════════════
 # SIDEBAR NAVIGATION
 # ═══════════════════════════════════════════════════════════════
 
@@ -332,6 +430,9 @@ PAGES = [
     "🌡️  Laser Cooling",
     "⚡  Rydberg Atoms",
     "🔢  Two-Qubit Gates",
+    "🌀  Rabi Oscillations",
+    "📉  Decoherence",
+    "🌊  Wigner Function",
 ]
 page = st.sidebar.radio("Navigate", PAGES, label_visibility="collapsed")
 
@@ -560,6 +661,36 @@ Every page has sliders and knobs — just play!
     for term, defn in terms.items():
         with st.expander(f"📖  {term}"):
             st.markdown(defn)
+
+    st.markdown("---")
+    with st.expander("📚 Key literature behind this app"):
+        st.markdown("""
+**Quantum Computing Foundations**
+- Nielsen, M. A. & Chuang, I. L. (2000). *Quantum Computation and Quantum Information.* Cambridge University Press. — The standard textbook.
+- Preskill, J. (2018). *Quantum Computing in the NISQ Era and Beyond.* Quantum 2, 79.
+
+**Laser Cooling & Optical Tweezers**
+- Chu, S. et al. (1985). *Three-dimensional viscous confinement and cooling of atoms by resonance radiation pressure.* PRL 55, 48. — Nobel-prize work.
+- Cohen-Tannoudji, C. N. (1997). *Manipulating atoms with photons.* Nobel Lecture, Rev. Mod. Phys. 70, 707.
+- Kaufman, A. M. & Ni, K.-K. (2021). *Quantum science with optical tweezer arrays of ultracold atoms and molecules.* Nature Physics 17, 1324.
+
+**Rydberg Quantum Gates**
+- Jaksch, D. et al. (2000). *Fast quantum gates for neutral atoms.* PRL 85, 2208. — Proposed the Rydberg blockade gate.
+- Saffman, M., Walker, T. G. & Mølmer, K. (2010). *Quantum information with Rydberg atoms.* Rev. Mod. Phys. 82, 2313.
+- Levine, H. et al. (2019). *Parallel implementation of high-fidelity multiqubit gates with neutral atoms.* PRL 123, 170503.
+
+**Ultracold Molecules (Li-Cs)**
+- Liu, L. R. et al. (2019). *Building one molecule from a reservoir of two atoms.* Science 360, 900.
+- Burchesky, S. et al. (2021). *Rotational coherence times of polar molecules in optical tweezers.* PRL 127, 123202.
+
+**Decoherence & Open Systems**
+- Bloch, F. (1946). *Nuclear Induction.* Physical Review 70, 460. — Origin of T₁ & T₂.
+- Breuer, H.-P. & Petruccione, F. (2002). *The Theory of Open Quantum Systems.* Oxford University Press.
+
+**Wigner Function & Motional States**
+- Wigner, E. P. (1932). *On the Quantum Correction For Thermodynamic Equilibrium.* Physical Review 40, 749.
+- Leibfried, D. et al. (1996). *Experimental Determination of the Motional Quantum State of a Trapped Atom.* PRL 77, 4281.
+""")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1570,4 +1701,405 @@ trapped Li and Cs atoms using the Rydberg blockade.
 
 Any two-qubit entangling gate is sufficient for universality when combined with
 arbitrary single-qubit rotations (already explored in the Gates page).
+""")
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE: RABI OSCILLATIONS  (QuTiP mesolve)
+# ═══════════════════════════════════════════════════════════════
+
+elif page == PAGES[9]:
+    st.title("🌀 Rabi Oscillations")
+
+    st.markdown("""
+<div class='concept-box'>
+<b>What is a Rabi oscillation?</b><br><br>
+When a resonant laser drives a two-level atom, its population oscillates coherently
+between |0⟩ and |1⟩ at the <b>Rabi frequency Ω</b>.  On the Bloch sphere this is a
+clean rotation around the X axis — the simplest quantum gate.<br><br>
+If the laser is <b>detuned by Δ</b> from resonance, the effective Rabi frequency
+increases to <b>Ω_eff = √(Ω² + Δ²)</b> but complete inversion is no longer possible —
+the oscillation amplitude shrinks.  Watching this is the clearest way to see that a
+qubit is not just a bit: the atom is simultaneously 0 <em>and</em> 1 during the pulse.<br><br>
+This is how the Hood Lab calibrates every single-qubit gate on trapped Li and Cs atoms.
+</div>
+""", unsafe_allow_html=True)
+
+    col_rb1, col_rb2 = st.columns([1, 2])
+
+    with col_rb1:
+        omega_mhz = st.slider("Rabi frequency Ω/2π (MHz)", 0.1, 10.0, 1.0, 0.1)
+        delta_mhz = st.slider("Detuning Δ/2π (MHz)", -8.0, 8.0, 0.0, 0.1,
+                              help="0 = on resonance → full inversion")
+        n_periods = st.slider("Duration (Rabi periods)", 0.5, 10.0, 3.0, 0.5)
+        psi0_r    = st.selectbox("Initial state", list(NAMED_STATES.keys()), key="rabi_s0")
+        psi0_np   = NAMED_STATES[psi0_r]
+
+        omega_eff = float(np.sqrt(omega_mhz**2 + delta_mhz**2))
+        T_rabi    = 1.0 / omega_eff if omega_eff > 0 else np.inf
+        p1_max    = (omega_mhz / omega_eff)**2 if omega_eff > 0 else 0.0
+
+        st.markdown(f"""
+**Generalized Rabi frequency**
+Ω_eff = √(Ω²+Δ²) = **{omega_eff:.2f} MHz**
+
+**Period** T = **{T_rabi*1000:.1f} ns**
+
+**Max P(|1⟩)** = (Ω/Ω_eff)² = **{p1_max:.3f}**
+
+{"✅ Full inversion — resonant drive" if abs(delta_mhz) < 0.05
+ else "⚠️ Partial inversion — off-resonance"}
+""")
+
+    # QuTiP time evolution
+    t_max  = float(n_periods) / omega_eff if omega_eff > 0 else 1.0
+    tlist  = np.linspace(0, t_max, 500)
+    H_rabi = float(delta_mhz) / 2 * sigmaz() + float(omega_mhz) / 2 * sigmax()
+    psi0_q = Qobj(psi0_np.reshape(2, 1))
+    res_r  = mesolve(H_rabi, psi0_q, tlist, [], [sigmax(), sigmay(), sigmaz()])
+    sx_r, sy_r, sz_r = (np.array(res_r.expect[i]) for i in range(3))
+    p0_t, p1_t = (1 + sz_r) / 2, (1 - sz_r) / 2
+
+    with col_rb2:
+        tab_pop, tab_traj = st.tabs(["📈 Population vs time", "🔵 Bloch sphere trajectory"])
+
+        with tab_pop:
+            p1_analytic = p1_max * np.sin(np.pi * omega_eff * tlist) ** 2
+            fig_pop = go.Figure()
+            fig_pop.add_trace(go.Scatter(x=tlist * 1000, y=p0_t,
+                name="|0⟩", line=dict(color="#44aaff", width=2.5)))
+            fig_pop.add_trace(go.Scatter(x=tlist * 1000, y=p1_t,
+                name="|1⟩", line=dict(color="#ff6b6b", width=2.5)))
+            fig_pop.add_trace(go.Scatter(x=tlist * 1000, y=p1_analytic,
+                name="P(|1⟩) analytic",
+                line=dict(color="#ffaa44", width=1.5, dash="dash")))
+            fig_pop.update_layout(
+                title=dict(text="Rabi oscillations (QuTiP mesolve)",
+                           font=dict(color="#c8b8ff")),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,15,35,0.9)",
+                xaxis=dict(title="Time (ns)", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                yaxis=dict(title="Population", range=[-0.05, 1.1],
+                           tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                legend=dict(font=dict(color="#ccc"), bgcolor="rgba(20,20,40,0.8)"),
+                margin=dict(l=20, r=20, t=40, b=40), height=400,
+            )
+            st.plotly_chart(fig_pop, use_container_width=True, key="rabi_pop")
+
+        with tab_traj:
+            fig_rt = bloch_with_traj(sx_r, sy_r, sz_r,
+                title=f"Bloch trajectory — Ω={omega_mhz} MHz, Δ={delta_mhz} MHz")
+            st.plotly_chart(fig_rt, use_container_width=True, key="rabi_traj")
+
+    with st.expander("📐 The Rabi formula"):
+        st.markdown("""
+Starting from |0⟩, the excited-state probability at time t is:
+
+**P(|1⟩, t) = (Ω / Ω_eff)² sin²(π Ω_eff t)**
+
+| Pulse | Condition | Effect |
+|---|---|---|
+| π-pulse | t = 1/(2Ω), Δ=0 | |0⟩ → |1⟩ (bit flip) |
+| π/2-pulse | t = 1/(4Ω), Δ=0 | |0⟩ → |+⟩ (superposition) |
+| 2π-pulse | t = 1/Ω, Δ=0 | Returns to |0⟩ but gains phase −1 (Rydberg gate!) |
+""")
+
+    with st.expander("📚 References"):
+        st.markdown("""
+- **Rabi, I. I.** (1937). Space Quantization in a Gyrating Magnetic Field. *Physical Review* 51, 652.
+- **Allen, L. & Eberly, J. H.** (1975). *Optical Resonance and Two-Level Atoms.* Wiley.
+- **Foot, C. J.** (2005). *Atomic Physics.* Oxford University Press — Ch. 7.
+- **Johansson, J. R. et al.** (2013). QuTiP 2: *A Python framework for the dynamics of open quantum systems.* Comp. Phys. Comm. 184, 1234.
+""")
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE: DECOHERENCE  (QuTiP Lindblad master equation)
+# ═══════════════════════════════════════════════════════════════
+
+elif page == PAGES[10]:
+    st.title("📉 Decoherence — T₁ & T₂")
+
+    st.markdown("""
+<div class='concept-box'>
+<b>Real qubits are never perfectly isolated.</b>  Coupling to the environment causes
+two distinct types of error:<br><br>
+• <b>T₁  (energy relaxation)</b> — the qubit decays from |1⟩ → |0⟩ spontaneously.
+  The Bloch z-component relaxes exponentially back to +1 (ground state).<br><br>
+• <b>T₂  (dephasing)</b> — quantum coherence (the x/y components) is destroyed by
+  low-frequency noise — laser phase jitter, magnetic field fluctuations, etc.
+  T₂ ≤ 2T₁ always.  The gap is <em>pure dephasing</em>.<br><br>
+On the Bloch sphere, decoherence makes the state vector <b>spiral inward</b> —
+shrinking from the surface (pure state, |r|=1) toward the centre (maximally mixed,
+|r|=0).  This is the Lindblad master equation, solved here exactly by QuTiP.
+</div>
+""", unsafe_allow_html=True)
+
+    col_d1, col_d2 = st.columns([1, 2])
+
+    with col_d1:
+        T1_us    = st.slider("T₁ (μs)", 1.0, 500.0, 100.0, 1.0,
+                             help="Energy relaxation: |1⟩→|0⟩")
+        T2_us    = st.slider("T₂ (μs)", 0.5, float(2 * 100.0), 30.0, 0.5,
+                             help="Total dephasing time — must be ≤ 2T₁", key="T2_sl")
+        T2_us    = min(T2_us, 2.0 * T1_us)
+        omega_q  = st.slider("Precession ω_q/2π (MHz)", 0.0, 3.0, 0.5, 0.05,
+                             help="Qubit Larmor frequency in the lab frame")
+        psi0_d   = st.selectbox("Initial state", list(NAMED_STATES.keys()),
+                                index=2, key="dec_s0")   # |+⟩ shows both effects
+
+        gamma1   = 1.0 / T1_us
+        gamma2   = 1.0 / T2_us
+        gamma_phi = max(0.0, gamma2 - gamma1 / 2)
+        T2_eff   = 1.0 / (gamma1 / 2 + gamma_phi) if (gamma1 / 2 + gamma_phi) > 0 else np.inf
+
+        st.markdown(f"""
+**Rates**
+- γ₁ = 1/T₁ = **{gamma1:.4f} MHz**
+- γ_φ (pure dephasing) = **{gamma_phi:.4f} MHz**
+- **T₂_eff = {T2_eff:.1f} μs**
+- T₂ / T₁ = **{T2_us/T1_us:.2f}** (maximum is 2.0)
+""")
+
+    # QuTiP Lindblad master equation
+    psi0_np_d = NAMED_STATES[psi0_d]
+    psi0_qd   = Qobj(psi0_np_d.reshape(2, 1))
+    t_max_d   = 5.0 * max(T1_us, T2_us)
+    tlist_d   = np.linspace(0, t_max_d, 400)
+    H_d       = float(omega_q) / 2 * sigmaz()
+    c_ops_d   = [np.sqrt(gamma1) * destroy(2)]
+    if gamma_phi > 1e-9:
+        c_ops_d.append(np.sqrt(2 * gamma_phi) * sigmaz() / 2)
+    res_d = mesolve(H_d, psi0_qd, tlist_d, c_ops_d,
+                    [sigmax(), sigmay(), sigmaz()])
+    sx_d, sy_d, sz_d = (np.array(res_d.expect[i]) for i in range(3))
+
+    with col_d2:
+        tab_dc1, tab_dc2 = st.tabs(["📈 Bloch components vs time", "🔵 Trajectory"])
+
+        with tab_dc1:
+            sz0  = float(np.real(psi0_np_d.conj() @ np.diag([1, -1]) @ psi0_np_d))
+            fig_dc = go.Figure()
+            fig_dc.add_trace(go.Scatter(x=tlist_d, y=sx_d, name="⟨X⟩",
+                line=dict(color="#ff6b6b", width=2)))
+            fig_dc.add_trace(go.Scatter(x=tlist_d, y=sy_d, name="⟨Y⟩",
+                line=dict(color="#44ff88", width=2)))
+            fig_dc.add_trace(go.Scatter(x=tlist_d, y=sz_d, name="⟨Z⟩",
+                line=dict(color="#44aaff", width=2.5)))
+            fig_dc.add_trace(go.Scatter(
+                x=tlist_d,
+                y=1.0 - (1.0 - sz0) * np.exp(-gamma1 * tlist_d),
+                name="T₁ envelope", line=dict(color="#44aaff", width=1.5, dash="dash")))
+            fig_dc.update_layout(
+                title=dict(text="Bloch vector components (QuTiP Lindblad)",
+                           font=dict(color="#c8b8ff")),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,15,35,0.9)",
+                xaxis=dict(title="Time (μs)", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                yaxis=dict(title="Expectation value", range=[-1.1, 1.1],
+                           tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                legend=dict(font=dict(color="#ccc"), bgcolor="rgba(20,20,40,0.8)"),
+                margin=dict(l=20, r=20, t=40, b=40), height=400,
+            )
+            st.plotly_chart(fig_dc, use_container_width=True, key="dec_comp")
+
+        with tab_dc2:
+            fig_dt = bloch_with_traj(sx_d, sy_d, sz_d,
+                color="#ff6b6b", end_color="#666688",
+                title="Qubit spiralling toward thermal equilibrium at centre")
+            st.plotly_chart(fig_dt, use_container_width=True, key="dec_traj")
+
+    r_final = float(np.sqrt(sx_d[-1]**2 + sy_d[-1]**2 + sz_d[-1]**2))
+    st.info(f"Final Bloch vector length |r| = **{r_final:.4f}** "
+            f"(1.0 = pure, 0.0 = maximally mixed)")
+
+    with st.expander("📐 Optical Bloch equations"):
+        st.markdown(r"""
+The equations of motion for the Bloch vector with relaxation:
+
+d⟨X⟩/dt = −ω_q ⟨Y⟩ − ⟨X⟩ / T₂
+
+d⟨Y⟩/dt =  ω_q ⟨X⟩ − ⟨Y⟩ / T₂
+
+d⟨Z⟩/dt = −(⟨Z⟩ − Z_eq) / T₁
+
+The Bloch vector **shrinks inward** — a pure state (on the surface) becomes a mixed
+state (inside the sphere) as the qubit entangles with its environment.
+""")
+
+    with st.expander("📚 References"):
+        st.markdown("""
+- **Bloch, F.** (1946). Nuclear Induction. *Physical Review* 70, 460.
+- **Krantz, P. et al.** (2019). A quantum engineer's guide to superconducting qubits. *Applied Physics Reviews* 6, 021318.
+- **Saffman, M. et al.** (2016). Quantum computing with atomic qubits and Rydberg interactions. *Journal of Physics B* 49, 202001.
+- **Johansson, J. R. et al.** (2013). QuTiP 2. *Computer Physics Communications* 184, 1234.
+""")
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE: WIGNER FUNCTION  (QuTiP wigner + motional states)
+# ═══════════════════════════════════════════════════════════════
+
+elif page == PAGES[11]:
+    st.title("🌊 Wigner Function & Motional States")
+
+    st.markdown("""
+<div class='concept-box'>
+<b>Quantised motion inside an optical tweezer.</b><br><br>
+A trapped atom doesn't just have an internal qubit — its <em>motion</em> in the tweezer
+potential is quantised, forming a <b>quantum harmonic oscillator</b> with Fock states
+|0⟩, |1⟩, |2⟩, … (phonons / motional quanta).  Before running a gate the atom must
+be cooled to the motional ground state |0⟩ via <b>sideband cooling</b>.<br><br>
+The <b>Wigner function W(x, p)</b> maps a quantum state onto phase space.  Unlike a
+classical probability distribution it can be <b>negative</b> — a smoking-gun signature
+of quantum behaviour.  Negative regions appear for Fock states and Schrödinger cat
+states but not for thermal or coherent states.
+</div>
+""", unsafe_allow_html=True)
+
+    N    = 35
+    xvec = np.linspace(-6, 6, 250)
+
+    col_w1, col_w2 = st.columns([1, 2])
+
+    with col_w1:
+        state_choice = st.selectbox("State of the motional oscillator", [
+            "Fock |n⟩  — number state",
+            "Coherent |α⟩  — classical-like",
+            "Thermal ρ_th  — mixed",
+            "Cat state  — Schrödinger's cat",
+            "Squeezed vacuum",
+        ])
+
+        if state_choice.startswith("Fock"):
+            n_fock = st.slider("Fock number n", 0, 10, 0)
+            state  = fock(N, n_fock)
+            desc   = (f"|{n_fock}⟩ has exactly {n_fock} phonons. "
+                      f"{'Ground state — no negative regions.' if n_fock == 0 else 'Negative Wigner regions appear — genuine quantum state!'}")
+
+        elif state_choice.startswith("Coherent"):
+            a_re  = st.slider("Re(α)", -3.0, 3.0, 1.5, 0.1)
+            a_im  = st.slider("Im(α)", -3.0, 3.0, 0.0, 0.1)
+            alpha = complex(a_re, a_im)
+            state = coherent(N, alpha)
+            desc  = (f"Coherent |α={alpha:.2f}⟩. Mean phonon number ⟨n⟩ = |α|² = {abs(alpha)**2:.2f}. "
+                     "Minimum-uncertainty Gaussian — the most classical-like quantum state.")
+
+        elif state_choice.startswith("Thermal"):
+            n_th  = st.slider("Mean phonon number ⟨n⟩", 0.0, 5.0, 1.0, 0.1)
+            state = thermal_dm(N, n_th)
+            desc  = (f"Thermal state, ⟨n⟩ = {n_th:.1f}. "
+                     "Broader Gaussian, always positive — fully classical phase-space description.")
+
+        elif state_choice.startswith("Cat"):
+            a_cat    = st.slider("|α| (separation / 2)", 0.5, 3.0, 2.0, 0.1)
+            cat_type = st.radio("Type", ["Even  +", "Odd  −"], horizontal=True)
+            sign     = 1.0 if "Even" in cat_type else -1.0
+            state    = (coherent(N, a_cat) + sign * coherent(N, -a_cat)).unit()
+            desc     = (f"Schrödinger cat: superposition of |+{a_cat:.1f}⟩ and |−{a_cat:.1f}⟩. "
+                        "The interference fringes between the two blobs are quantum coherence — "
+                        "they disappear the instant the state decoheres.")
+
+        else:
+            r_sq  = st.slider("Squeezing r", 0.0, 2.0, 0.8, 0.05)
+            phi_sq = st.slider("Squeezing angle φ", 0.0, float(np.pi), 0.0, 0.05)
+            state  = squeeze(N, r_sq * np.exp(1j * phi_sq)) * basis(N, 0)
+            desc   = (f"Squeezed vacuum, r = {r_sq:.2f}. "
+                      "Noise is reduced in one quadrature below the vacuum level, "
+                      "increased in the conjugate — Heisenberg uncertainty still satisfied.")
+
+        st.markdown(f"*{desc}*")
+
+        # Phonon number distribution
+        if state.type == "ket":
+            probs = np.abs(state.full().flatten()[:15]) ** 2
+        else:
+            probs = np.real(np.diag(state.full()))[:15]
+
+        fig_pn = go.Figure(go.Bar(
+            x=list(range(len(probs))), y=probs,
+            marker_color="#7b68ee",
+            text=[f"{p:.3f}" if p > 0.005 else "" for p in probs],
+            textposition="outside", textfont=dict(color="#fff", size=10),
+        ))
+        fig_pn.update_layout(
+            title=dict(text="Phonon number distribution P(n)",
+                       font=dict(color="#c8b8ff", size=13)),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(15,15,35,0.9)",
+            xaxis=dict(title="n", tickfont=dict(color="#aaa")),
+            yaxis=dict(title="P(n)", tickfont=dict(color="#aaa"),
+                       gridcolor="rgba(100,100,150,0.2)"),
+            margin=dict(l=20, r=20, t=35, b=30), height=210,
+        )
+        st.plotly_chart(fig_pn, use_container_width=True, key="wigner_pn")
+
+    with col_w2:
+        W      = wigner(state, xvec, xvec)
+        w_abs  = float(np.max(np.abs(W))) or 1.0
+        vol_neg = float(np.sum(W[W < 0]) * (xvec[1] - xvec[0]) ** 2)
+
+        fig_wg = go.Figure(go.Heatmap(
+            x=xvec, y=xvec, z=W,
+            colorscale=[
+                [0.0,  "rgb(200, 30,  30)"],
+                [0.38, "rgb(80,  0,   0)"],
+                [0.5,  "rgb(15,  15,  35)"],
+                [0.62, "rgb(0,   0,   100)"],
+                [1.0,  "rgb(50,  130, 255)"],
+            ],
+            zmin=-w_abs, zmax=w_abs,
+            colorbar=dict(title="W(x,p)",
+                          tickfont=dict(color="#ccc"),
+                          titlefont=dict(color="#ccc")),
+        ))
+        fig_wg.add_trace(go.Contour(
+            x=xvec, y=xvec, z=W,
+            showscale=False,
+            contours=dict(coloring="none", showlines=True,
+                          start=-w_abs, end=w_abs, size=w_abs / 6),
+            line=dict(color="rgba(255,255,255,0.2)", width=0.8),
+        ))
+        fig_wg.update_layout(
+            title=dict(
+                text="Wigner function W(x, p)  —  🔴 red = negative = non-classical",
+                font=dict(color="#c8b8ff")),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(15,15,35,0.9)",
+            xaxis=dict(title="Position quadrature  x", tickfont=dict(color="#aaa")),
+            yaxis=dict(title="Momentum quadrature  p", tickfont=dict(color="#aaa")),
+            margin=dict(l=20, r=20, t=45, b=40), height=490,
+        )
+        st.plotly_chart(fig_wg, use_container_width=True, key="wigner_map")
+
+        if abs(vol_neg) > 1e-4:
+            st.error(f"Negative Wigner volume = **{vol_neg:.4f}** — genuinely non-classical state!")
+        else:
+            st.success("Wigner function ≥ 0 everywhere — this state has a classical phase-space description.")
+
+    with st.expander("📐 What is the Wigner function?"):
+        st.markdown(r"""
+The Wigner function is a **quasi-probability distribution** on phase space (x, p):
+
+W(x, p) = (1/π) ∫ ⟨x+y | ρ | x−y⟩ e^(2ipy) dy
+
+Key facts:
+- Normalised: ∫∫ W dx dp = 1
+- **Marginals** are real probabilities: ∫ W dp = |ψ(x)|², ∫ W dx = |φ(p)|²
+- **Can be negative** — the hallmark of a quantum state with no classical analogue
+- Measured experimentally via **homodyne tomography** (or ion-trap reconstructions)
+
+In optical tweezer experiments, the motional Wigner function is accessed by mapping
+motional state populations onto internal states via sideband pulses.
+""")
+
+    with st.expander("📚 References"):
+        st.markdown("""
+- **Wigner, E. P.** (1932). On the Quantum Correction For Thermodynamic Equilibrium. *Physical Review* 40, 749.
+- **Leibfried, D. et al.** (1996). Experimental Determination of the Motional Quantum State of a Trapped Atom. *PRL* 77, 4281. ← First measurement of a trapped-atom Wigner function!
+- **Lvovsky, A. I. & Raymer, M. G.** (2009). Continuous-variable optical quantum-state tomography. *Rev. Mod. Phys.* 81, 299.
+- **de Léséleuc, S. et al.** (2019). Observation of a symmetry-protected topological phase of interacting bosons with Rydberg atoms. *Science* 365, 775.
 """)
