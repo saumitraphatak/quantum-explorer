@@ -844,10 +844,11 @@ built in at creation time.)
         st.markdown("#### Measurement outcome probabilities")
         outcomes = list(info["probs"].keys())
         probs    = list(info["probs"].values())
+        # Bug fix 1: suppress "0%" labels on zero-height bars to avoid axis collisions
         fig_bell = go.Figure(go.Bar(
             x=outcomes, y=probs,
             marker_color=["#7b68ee", "#ff6b6b", "#44ccaa", "#ffaa44"],
-            text=[f"{p:.0%}" for p in probs],
+            text=[f"{p:.0%}" if p > 0 else "" for p in probs],
             textposition="outside",
             textfont=dict(color="#fff", size=13),
         ))
@@ -865,17 +866,21 @@ built in at creation time.)
 
         st.markdown("#### Simulate entangled measurements")
         n_bell = st.select_slider("Shots", [50, 100, 500, 1000, 5000], 200, key="bell_n")
+
+        # Bug fix 2: store simulation in session_state so it survives reruns
+        sim_key = f"bell_sim_{selected_bell}"
         if st.button("▶  Run Bell experiment"):
             non_zero = {k: v for k, v in info["probs"].items() if v > 0}
-            keys = list(non_zero.keys())
+            sim_choices = list(non_zero.keys())
             pvec = np.array(list(non_zero.values()))
             pvec = pvec / pvec.sum()
-            samp = np.random.choice(keys, size=n_bell, p=pvec)
+            samp = np.random.choice(sim_choices, size=n_bell, p=pvec)
             counts = {k: int(np.sum(samp == k)) for k in outcomes}
             fig_sim = go.Figure(go.Bar(
                 x=list(counts.keys()), y=list(counts.values()),
                 marker_color=["#7b68ee", "#ff6b6b", "#44ccaa", "#ffaa44"],
-                text=list(counts.values()), textposition="outside",
+                text=[str(v) if v > 0 else "" for v in counts.values()],
+                textposition="outside",
                 textfont=dict(color="#fff"),
             ))
             fig_sim.update_layout(
@@ -885,9 +890,13 @@ built in at creation time.)
                 xaxis=dict(tickfont=dict(color="#fff")),
                 margin=dict(l=20, r=20, t=30, b=40),
                 height=230,
-                title=dict(text=f"{n_bell} shots", font=dict(color="#c8b8ff", size=13)),
+                title=dict(text=f"{n_bell} shots — {selected_bell.split('(')[0].strip()}",
+                           font=dict(color="#c8b8ff", size=13)),
             )
-            st.plotly_chart(fig_sim, use_container_width=True, key="bell_sim")
+            st.session_state[sim_key] = fig_sim
+
+        if sim_key in st.session_state:
+            st.plotly_chart(st.session_state[sim_key], use_container_width=True, key="bell_sim")
 
     with col_e2:
         st.markdown("### Single-qubit views after entanglement")
