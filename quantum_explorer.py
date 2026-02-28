@@ -192,7 +192,7 @@ def build_bloch_sphere(vectors: list, labels: list = None,
         ("-Y", [0, 0], [0, -ax_len], [0, 0]),
         ("-Z", [0, 0], [0, 0], [0, -ax_len]),
     ]
-    for name, ax, ay, az in axis_cfg:
+    for _, ax, ay, az in axis_cfg:
         fig.add_trace(go.Scatter3d(
             x=ax, y=ay, z=az, mode="lines",
             line=dict(color="rgba(200,200,255,0.4)", width=2),
@@ -329,6 +329,9 @@ PAGES = [
     "〰️  Superposition & Interference",
     "📏  Measurement",
     "🔗  Entanglement",
+    "🌡️  Laser Cooling",
+    "⚡  Rydberg Atoms",
+    "🔢  Two-Qubit Gates",
 ]
 page = st.sidebar.radio("Navigate", PAGES, label_visibility="collapsed")
 
@@ -339,6 +342,149 @@ Built with Streamlit + Plotly<br>
 No physics background required!
 </small>
 """, unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════
+# ADDITIONAL HELPERS  (Laser Cooling · Rydberg · Two-Qubit Gates)
+# ═══════════════════════════════════════════════════════════════
+
+kB_SI = 1.38064852e-23  # J/K
+
+ATOMS = {
+    "⁶Li  (Lithium-6)": {
+        "m": 6.015e-3 / 6.022e23,
+        "gamma": 2 * np.pi * 5.87e6,
+        "lam": 671e-9,
+        "T_D": 141e-6,
+    },
+    "¹³³Cs  (Cesium-133)": {
+        "m": 132.905e-3 / 6.022e23,
+        "gamma": 2 * np.pi * 5.23e6,
+        "lam": 852e-9,
+        "T_D": 125e-6,
+    },
+}
+
+
+def mb_1d(v_arr, T, m):
+    """1D Maxwell-Boltzmann speed distribution."""
+    sigma = np.sqrt(kB_SI * T / m)
+    return np.exp(-v_arr ** 2 / (2 * sigma ** 2)) / (sigma * np.sqrt(2 * np.pi))
+
+
+def doppler_force_norm(u_arr, delta_norm, s0=0.5):
+    """
+    Normalised Doppler cooling force (units: ℏkΓ/2).
+    u = kv/Γ  |  delta_norm = δ/Γ  (negative = red-detuned = cooling)
+    """
+    F_p = s0 / (1 + s0 + 4 * (delta_norm - u_arr) ** 2)
+    F_m = s0 / (1 + s0 + 4 * (delta_norm + u_arr) ** 2)
+    return F_p - F_m
+
+
+def build_bloch_xyz(vectors_xyz, labels=None, colors=None, title="Bloch Sphere"):
+    """
+    Bloch sphere figure where each vector is given as (rx, ry, rz).
+    Vectors with |r| < 1 represent mixed states and sit inside the sphere.
+    """
+    labels = labels or [f"ψ{i+1}" for i in range(len(vectors_xyz))]
+    colors = colors or ["#ff4444", "#44aaff", "#44ff88", "#ffaa44"]
+    fig = go.Figure()
+
+    u = np.linspace(0, 2 * np.pi, 50)
+    v = np.linspace(0, np.pi, 35)
+    xs = np.outer(np.cos(u), np.sin(v))
+    ys = np.outer(np.sin(u), np.sin(v))
+    zs = np.outer(np.ones(len(u)), np.cos(v))
+    fig.add_trace(go.Surface(
+        x=xs, y=ys, z=zs, opacity=0.08,
+        colorscale=[[0, "rgba(120,100,255,0.05)"], [1, "rgba(180,160,255,0.15)"]],
+        showscale=False, hoverinfo="skip",
+    ))
+
+    t = np.linspace(0, 2 * np.pi, 200)
+    for xe, ye, ze in [(np.cos(t), np.sin(t), np.zeros_like(t)),
+                       (np.cos(t), np.zeros_like(t), np.sin(t)),
+                       (np.zeros_like(t), np.cos(t), np.sin(t))]:
+        fig.add_trace(go.Scatter3d(x=xe, y=ye, z=ze, mode="lines",
+            line=dict(color="rgba(160,150,220,0.25)", width=1),
+            hoverinfo="skip", showlegend=False))
+
+    ax_len = 1.3
+    for ax, ay, az in [
+        ([0, ax_len], [0, 0], [0, 0]), ([0, 0], [0, ax_len], [0, 0]),
+        ([0, 0], [0, 0], [0, ax_len]), ([0, -ax_len], [0, 0], [0, 0]),
+        ([0, 0], [0, -ax_len], [0, 0]), ([0, 0], [0, 0], [0, -ax_len]),
+    ]:
+        fig.add_trace(go.Scatter3d(x=ax, y=ay, z=az, mode="lines",
+            line=dict(color="rgba(200,200,255,0.4)", width=2),
+            hoverinfo="skip", showlegend=False))
+
+    special = {"|0⟩": (0, 0, 1.18), "|1⟩": (0, 0, -1.18),
+               "|+⟩": (1.18, 0, 0), "|-⟩": (-1.18, 0, 0),
+               "|i⟩": (0, 1.18, 0), "|-i⟩": (0, -1.18, 0)}
+    fig.add_trace(go.Scatter3d(
+        x=[sv[0] for sv in special.values()],
+        y=[sv[1] for sv in special.values()],
+        z=[sv[2] for sv in special.values()],
+        mode="text", text=list(special.keys()),
+        textfont=dict(size=11, color="rgba(200,200,255,0.7)"),
+        hoverinfo="skip", showlegend=False,
+    ))
+
+    for i, (rx, ry, rz) in enumerate(vectors_xyz):
+        r = float(np.sqrt(rx ** 2 + ry ** 2 + rz ** 2))
+        col = colors[i % len(colors)]
+        for px, py, pz in [(rx, ry, 0), (rx, 0, rz), (0, ry, rz)]:
+            fig.add_trace(go.Scatter3d(x=[rx, px], y=[ry, py], z=[rz, pz], mode="lines",
+                line=dict(color=col, width=1, dash="dot"),
+                hoverinfo="skip", showlegend=False, opacity=0.4))
+        fig.add_trace(go.Scatter3d(
+            x=[0, rx], y=[0, ry], z=[0, rz],
+            mode="lines+markers", line=dict(color=col, width=6),
+            marker=dict(size=[0, 8], color=col),
+            name=f"{labels[i]}  (|r|={r:.2f})",
+        ))
+
+    fig.update_layout(
+        title=dict(text=title, font=dict(color="#c8b8ff", size=15)),
+        paper_bgcolor="rgba(10,10,26,0)",
+        scene=dict(
+            bgcolor="rgba(10,10,30,0.95)",
+            xaxis=dict(title="X", showgrid=False, zeroline=False,
+                       tickfont=dict(color="#aaa"), titlefont=dict(color="#aaa"),
+                       backgroundcolor="rgba(0,0,0,0)"),
+            yaxis=dict(title="Y", showgrid=False, zeroline=False,
+                       tickfont=dict(color="#aaa"), titlefont=dict(color="#aaa"),
+                       backgroundcolor="rgba(0,0,0,0)"),
+            zaxis=dict(title="Z", showgrid=False, zeroline=False,
+                       tickfont=dict(color="#aaa"), titlefont=dict(color="#aaa"),
+                       backgroundcolor="rgba(0,0,0,0)"),
+            camera=dict(eye=dict(x=1.6, y=1.6, z=1.0)),
+        ),
+        legend=dict(font=dict(color="#ccc"), bgcolor="rgba(20,20,40,0.8)"),
+        margin=dict(l=0, r=0, t=40, b=0),
+        height=450,
+    )
+    return fig
+
+
+def reduced_bloch_vec(psi4, qubit):
+    """Bloch vector (rx, ry, rz) of qubit A (0) or B (1) from a 2-qubit pure state."""
+    C = psi4.reshape(2, 2)
+    rho = C @ C.conj().T if qubit == 0 else C.conj().T @ C
+    return (
+        float(np.real(np.trace(rho @ X))),
+        float(np.real(np.trace(rho @ Y))),
+        float(np.real(np.trace(rho @ Z))),
+    )
+
+
+# Two-qubit gate matrices (basis: |00⟩, |01⟩, |10⟩, |11⟩)
+CNOT  = np.array([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], dtype=complex)
+CZ    = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,-1]], dtype=complex)
+ISWAP = np.array([[1,0,0,0],[0,0,1j,0],[0,1j,0,0],[0,0,0,1]], dtype=complex)
+TWO_Q_GATES = {"CNOT": CNOT, "CZ": CZ, "iSWAP": ISWAP}
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -934,4 +1080,494 @@ to compare results, which is limited to the speed of light.
 - **Superdense coding:** Send 2 classical bits using 1 qubit + 1 ebit
 - **Quantum error correction:** Entangle logical qubits to protect against noise
 - **Bell test experiments:** Proved quantum mechanics is non-local (Nobel Prize 2022)
+""")
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE: LASER COOLING & OPTICAL TWEEZERS
+# ═══════════════════════════════════════════════════════════════
+
+elif page == PAGES[6]:
+    st.title("🌡️ Laser Cooling & Optical Tweezers")
+
+    st.markdown("""
+<div class='concept-box'>
+<b>How do you stop an atom?</b> — with light.<br><br>
+When an atom moving <em>toward</em> a laser absorbs a photon, momentum conservation gives it
+a tiny kick <em>backward</em>.  With two counter-propagating beams tuned slightly
+<b>below</b> the atomic resonance (red-detuned by δ), the Doppler shift makes moving atoms
+preferentially absorb from the beam they are heading into — always being pushed back.
+Repeat millions of times per second: atoms slow from ~600 m/s to centimetres per second.<br><br>
+A tightly focused Gaussian laser beam creates a <b>dipole trap</b> — the intensity gradient
+pulls atoms toward the focal point.  This is the <b>optical tweezer</b> used in the
+<a href="https://hoodlab.physics.purdue.edu" style="color:#7b68ee">Hood Lab at Purdue</a>
+to trap individual <sup>6</sup>Li and <sup>133</sup>Cs atoms — the exact atoms you can
+explore below.
+</div>
+""", unsafe_allow_html=True)
+
+    tab_cool, tab_tweezer = st.tabs(["🌡️ Doppler Cooling", "🔬 Optical Tweezer Trap"])
+
+    # ── Doppler Cooling tab ──────────────────────────────────────
+    with tab_cool:
+        col_cc, col_cp = st.columns([1, 2])
+        with col_cc:
+            atom_name = st.selectbox("Atom", list(ATOMS.keys()))
+            atom = ATOMS[atom_name]
+            m, gamma, lam, T_D = atom["m"], atom["gamma"], atom["lam"], atom["T_D"]
+            k_atom = 2 * np.pi / lam
+            v_unit = gamma / k_atom          # velocity unit = Γ/k
+
+            st.markdown(f"""
+**{atom_name}**
+- Cooling wavelength: **{lam*1e9:.0f} nm**
+- Natural linewidth Γ/2π: **{gamma/(2*np.pi*1e6):.2f} MHz**
+- Doppler temperature limit: **{T_D*1e6:.0f} μK**
+- RMS speed at T_D: **{np.sqrt(kB_SI*T_D/m)*100:.1f} cm/s**
+""")
+            st.markdown("---")
+            log_T = st.slider(
+                "Temperature (powers of 10)",
+                -6.0, 2.5, 2.3, step=0.05,
+                help="Slide left to cool the atom cloud",
+                format="10^%.2f K",
+            )
+            T = 10 ** log_T
+            st.markdown(
+                f"**T = {T:.3g} K** = {T*1e6:.2f} μK" if T < 1e-3
+                else f"**T = {T:.3f} K**"
+            )
+
+            delta_norm = st.slider(
+                "Laser detuning δ/Γ", -5.0, -0.1, -0.5, step=0.05,
+                help="Optimal cooling near δ = −Γ/2",
+            )
+            s0 = st.slider(
+                "Saturation s₀", 0.05, 2.0, 0.5, step=0.05,
+                help="Beam intensity / saturation intensity",
+            )
+
+        with col_cp:
+            # Maxwell-Boltzmann distribution
+            v_max = min(5 * np.sqrt(kB_SI * 300 / m), 3000.0)
+            v_arr = np.linspace(-v_max, v_max, 800)
+            f_room = mb_1d(v_arr, 300.0, m)
+            f_cool = mb_1d(v_arr, T, m)
+            peak   = float(f_room.max())
+
+            fig_mb = go.Figure()
+            fig_mb.add_trace(go.Scatter(
+                x=v_arr, y=f_room / peak,
+                name="T = 300 K (room temp)",
+                line=dict(color="#ff6b6b", width=2),
+                fill="tozeroy", fillcolor="rgba(255,107,107,0.1)",
+            ))
+            fig_mb.add_trace(go.Scatter(
+                x=v_arr, y=f_cool / peak,
+                name=f"T = {T:.3g} K",
+                line=dict(color="#44aaff", width=2.5),
+                fill="tozeroy", fillcolor="rgba(68,170,255,0.15)",
+            ))
+            fig_mb.update_layout(
+                title=dict(text="Velocity distribution (narrowing = cooling)",
+                           font=dict(color="#c8b8ff")),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,15,35,0.9)",
+                xaxis=dict(title="Velocity (m/s)", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                yaxis=dict(title="Normalised probability", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                legend=dict(font=dict(color="#ccc"), bgcolor="rgba(20,20,40,0.8)"),
+                margin=dict(l=20, r=20, t=40, b=40), height=250,
+            )
+            st.plotly_chart(fig_mb, use_container_width=True, key="mb_dist")
+
+            # Doppler force vs velocity
+            u_arr  = np.linspace(-12, 12, 600)
+            F_norm = doppler_force_norm(u_arr, delta_norm, s0)
+            v_cap  = abs(delta_norm) * v_unit
+
+            fig_force = go.Figure()
+            fig_force.add_hline(y=0, line=dict(color="rgba(255,255,255,0.2)", dash="dot"))
+            fig_force.add_vline(x=0, line=dict(color="rgba(255,255,255,0.2)", dash="dot"))
+            fig_force.add_trace(go.Scatter(
+                x=u_arr * v_unit, y=F_norm,
+                line=dict(color="#7b68ee", width=2.5),
+                fill="tozeroy", fillcolor="rgba(123,104,238,0.1)",
+                name="Cooling force",
+            ))
+            fig_force.add_vrect(
+                x0=-v_cap, x1=v_cap,
+                fillcolor="rgba(68,255,136,0.07)", line_width=0,
+                annotation_text="Capture range", annotation_position="top",
+                annotation_font_color="#44ff88",
+            )
+            fig_force.update_layout(
+                title=dict(text=f"Doppler force (δ/Γ = {delta_norm:.2f}, s₀ = {s0:.2f})",
+                           font=dict(color="#c8b8ff")),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,15,35,0.9)",
+                xaxis=dict(title="Velocity (m/s)", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                yaxis=dict(title="Force  (ℏkΓ/2)", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                legend=dict(font=dict(color="#ccc"), bgcolor="rgba(20,20,40,0.8)"),
+                margin=dict(l=20, r=20, t=40, b=40), height=270,
+            )
+            st.plotly_chart(fig_force, use_container_width=True, key="doppler_force")
+
+    # ── Optical Tweezer tab ──────────────────────────────────────
+    with tab_tweezer:
+        col_tw, col_tp = st.columns([1, 2])
+        with col_tw:
+            st.markdown("### Gaussian beam profile")
+            st.markdown("""
+The intensity of a Gaussian beam is:
+
+**I(r, z) = I₀ · exp(−2r²/w(z)²)**
+
+where **w(z) = w₀√(1 + (z/z_R)²)** and **z_R = πw₀²/λ** is the Rayleigh range.
+
+Atoms are attracted to the intensity maximum at the focus.
+With a sub-micron beam waist only a **single atom** fits in the trap.
+""")
+            w0_um = st.slider("Beam waist w₀ (μm)", 0.5, 5.0, 1.0, 0.1)
+            lam_choice = st.selectbox("Trapping laser", ["1064 nm (typical IR)", "760 nm", "532 nm (green)"])
+            lam_tw = {"1064 nm (typical IR)": 1064e-9,
+                      "760 nm": 760e-9, "532 nm (green)": 532e-9}[lam_choice]
+            w0 = w0_um * 1e-6
+            zR = np.pi * w0 ** 2 / lam_tw
+
+            st.markdown(f"""
+- Beam waist w₀ = **{w0_um:.1f} μm**
+- Rayleigh range z_R = **{zR*1e6:.1f} μm**
+- Depth of focus = **{2*zR*1e6:.1f} μm**
+
+*Hood Lab tweezers: w₀ ≈ 0.8–1.5 μm, λ = 1064 nm*
+""")
+
+        with col_tp:
+            r_max = 4 * w0
+            r_pts = np.linspace(-r_max, r_max, 300)
+            z_pts = np.linspace(-3 * zR, 3 * zR, 300)
+            R, Z  = np.meshgrid(r_pts, z_pts)
+            W     = w0 * np.sqrt(1 + (Z / zR) ** 2)
+            I     = np.exp(-2 * R ** 2 / W ** 2)
+
+            fig_tw = go.Figure(go.Heatmap(
+                x=r_pts * 1e6, y=z_pts * 1e6, z=I,
+                colorscale="Inferno",
+                colorbar=dict(title="Intensity", tickfont=dict(color="#ccc"),
+                              titlefont=dict(color="#ccc")),
+            ))
+            z_line = np.linspace(-3 * zR, 3 * zR, 300)
+            w_line = w0 * np.sqrt(1 + (z_line / zR) ** 2)
+            for sign in [1, -1]:
+                fig_tw.add_trace(go.Scatter(
+                    x=sign * w_line * 1e6, y=z_line * 1e6,
+                    mode="lines", line=dict(color="white", width=1.5, dash="dash"),
+                    showlegend=False, hoverinfo="skip",
+                ))
+            fig_tw.update_layout(
+                title=dict(text="Optical tweezer intensity I(r, z)  — dashed = beam waist",
+                           font=dict(color="#c8b8ff")),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,15,35,0.9)",
+                xaxis=dict(title="Radial r (μm)", tickfont=dict(color="#aaa")),
+                yaxis=dict(title="Axial z (μm)", tickfont=dict(color="#aaa")),
+                margin=dict(l=20, r=20, t=40, b=40), height=430,
+            )
+            st.plotly_chart(fig_tw, use_container_width=True, key="tweezer_heat")
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE: RYDBERG ATOMS & BLOCKADE
+# ═══════════════════════════════════════════════════════════════
+
+elif page == PAGES[7]:
+    st.title("⚡ Rydberg Atoms & Quantum Gate")
+
+    st.markdown("""
+<div class='concept-box'>
+<b>Rydberg atoms</b> are atoms excited to high principal quantum number <em>n</em>.
+They are enormous — orbital radius scales as <b>n²</b> — and interact with each other
+via van der Waals forces that scale as <b>n¹¹</b>.<br><br>
+This extreme sensitivity gives rise to the <b>Rydberg blockade</b>: once one atom is
+in a Rydberg state, the interaction shifts its neighbour's transition frequency so far
+that the neighbour <em>cannot</em> also be excited.  Only <em>one</em> atom within the
+blockade radius Rᵦ can occupy the Rydberg level at a time.<br><br>
+This conditional excitation is the mechanism behind the <b>Rydberg CZ gate</b> —
+the entangling gate the Hood Lab is building with trapped Li and Cs atoms.
+</div>
+""", unsafe_allow_html=True)
+
+    tab_r1, tab_r2 = st.tabs(["⚛️ Scaling Laws", "🚧 Blockade & Gate"])
+
+    with tab_r1:
+        col_r1, col_r2 = st.columns([1, 2])
+        with col_r1:
+            n_val = st.slider("Principal quantum number n", 10, 100, 30, step=1)
+            a0_nm = 0.0529          # Bohr radius in nm
+            r_n   = n_val ** 2 * a0_nm
+            E_n   = 13.6 / n_val ** 2 * 1000   # binding energy in meV
+            tau_n = 1.6e-8 * (n_val / 10) ** 3  # lifetime in seconds (rough n³ scaling)
+            C6_n  = (n_val / 30) ** 11           # C₆ normalised to n = 30
+
+            st.markdown(f"""
+**n = {n_val}**
+
+| Property | Value |
+|---|---|
+| Orbital radius | {r_n:.1f} nm = {r_n/a0_nm:.0f} a₀ |
+| Binding energy | {E_n:.2f} meV |
+| Lifetime τ | {tau_n*1e6:.1f} μs |
+| C₆ (relative to n=30) | ×{C6_n:.1f} |
+
+Ground state Li orbital radius: **0.17 nm**.
+At n = {n_val}, the Rydberg atom is **{r_n/0.17:.0f}× larger**.
+""")
+
+        with col_r2:
+            n_range    = np.arange(10, 101)
+            r_range    = n_range ** 2 * a0_nm
+            E_range    = 13.6 / n_range ** 2 * 1000
+            tau_range  = 1.6e-8 * (n_range / 10) ** 3 * 1e6
+            C6_range   = (n_range / 30) ** 11
+
+            fig_r = make_subplots(
+                rows=2, cols=2,
+                subplot_titles=["Orbital radius (nm)", "Binding energy (meV)",
+                                "Lifetime (μs)", "C₆ coefficient (norm. n=30)"],
+            )
+            for (row, col, y_data, color) in [
+                (1, 1, r_range,   "#44aaff"),
+                (1, 2, E_range,   "#ff6b6b"),
+                (2, 1, tau_range, "#44ff88"),
+                (2, 2, C6_range,  "#ffaa44"),
+            ]:
+                fig_r.add_trace(go.Scatter(
+                    x=n_range, y=y_data, mode="lines",
+                    line=dict(color=color, width=2), showlegend=False,
+                ), row=row, col=col)
+                idx = n_val - 10
+                fig_r.add_trace(go.Scatter(
+                    x=[n_val], y=[y_data[idx]], mode="markers",
+                    marker=dict(color=color, size=10), showlegend=False,
+                ), row=row, col=col)
+                fig_r.update_xaxes(title_text="n", tickfont=dict(color="#aaa"),
+                                   gridcolor="rgba(100,100,150,0.2)", row=row, col=col)
+                fig_r.update_yaxes(tickfont=dict(color="#aaa"),
+                                   gridcolor="rgba(100,100,150,0.2)", row=row, col=col)
+
+            fig_r.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,15,35,0.9)",
+                height=420, margin=dict(l=20, r=20, t=60, b=20),
+                font=dict(color="#ccc"),
+            )
+            st.plotly_chart(fig_r, use_container_width=True, key="rydberg_scale")
+
+    with tab_r2:
+        st.markdown("""
+<div class='concept-box'>
+<b>Rydberg CZ gate — three steps:</b><br>
+1. π-pulse on atom A → excites A to Rydberg |r⟩ if A = |1⟩<br>
+2. 2π-pulse on atom B → would flip B, but <b>blockade prevents it if A is excited</b>,
+   so |11⟩ picks up a phase of −1 only<br>
+3. π-pulse on atom A → de-excites A back<br><br>
+Result: |00⟩, |01⟩, |10⟩ unchanged; |11⟩ → −|11⟩ &nbsp;=&nbsp; <b>CZ gate!</b>
+</div>
+""", unsafe_allow_html=True)
+
+        col_b1, col_b2 = st.columns([1, 2])
+        with col_b1:
+            n_block    = st.slider("Rydberg level n", 20, 80, 50, key="nb")
+            omega_mhz  = st.slider("Rabi frequency Ω/2π (MHz)", 0.1, 5.0, 1.0, step=0.1)
+
+            # C₆ scaling: reference C₆(n=50) ≈ 862 GHz·μm⁶ (Rb, illustrative)
+            C6_ref  = 862.0           # GHz·μm⁶
+            C6_n    = C6_ref * (n_block / 50) ** 11
+            Omega   = omega_mhz * 1e-3  # GHz
+            R_b     = (C6_n / Omega) ** (1 / 6)   # μm
+
+            st.markdown(f"""
+**Gate parameters**
+- n = **{n_block}**
+- C₆ ≈ **{C6_n:.0f}** GHz·μm⁶
+- Ω/2π = **{omega_mhz:.1f}** MHz
+- **Blockade radius Rᵦ ≈ {R_b:.1f} μm**
+
+*Typical Hood Lab tweezer spacing: 3–10 μm*
+""")
+
+        with col_b2:
+            d_um = np.linspace(0.5, 25, 500)
+            U_GHz = C6_n / d_um ** 6
+
+            fig_b = go.Figure()
+            fig_b.add_trace(go.Scatter(
+                x=d_um, y=U_GHz, mode="lines",
+                line=dict(color="#ff6b6b", width=2.5),
+                name="C₆/R⁶ interaction",
+            ))
+            fig_b.add_hline(y=Omega,
+                line=dict(color="#44ff88", width=2, dash="dash"),
+                annotation_text=f"Ω/2π = {omega_mhz} MHz",
+                annotation_position="right",
+                annotation_font_color="#44ff88",
+            )
+            fig_b.add_vline(x=R_b,
+                line=dict(color="#ffaa44", width=2, dash="dot"),
+                annotation_text=f"Rᵦ = {R_b:.1f} μm",
+                annotation_position="top right",
+                annotation_font_color="#ffaa44",
+            )
+            fig_b.add_vrect(x0=0, x1=R_b,
+                fillcolor="rgba(255,100,100,0.08)", line_width=0,
+                annotation_text="BLOCKED", annotation_position="inside top",
+                annotation_font_color="#ff6b6b",
+            )
+            fig_b.update_layout(
+                title=dict(text="Rydberg interaction vs atom separation",
+                           font=dict(color="#c8b8ff")),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(15,15,35,0.9)",
+                xaxis=dict(title="Inter-atom distance R (μm)", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)"),
+                yaxis=dict(title="Interaction U (GHz)", tickfont=dict(color="#aaa"),
+                           gridcolor="rgba(100,100,150,0.2)", type="log"),
+                legend=dict(font=dict(color="#ccc"), bgcolor="rgba(20,20,40,0.8)"),
+                margin=dict(l=20, r=20, t=40, b=40), height=380,
+            )
+            st.plotly_chart(fig_b, use_container_width=True, key="blockade_plot")
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE: TWO-QUBIT GATES
+# ═══════════════════════════════════════════════════════════════
+
+elif page == PAGES[8]:
+    st.title("🔢 Two-Qubit Gates")
+
+    st.markdown("""
+<div class='concept-box'>
+Single-qubit gates are rotations on the Bloch sphere.  To build a <b>universal quantum
+computer</b> you also need <b>entangling gates</b> that create correlations between two qubits.<br><br>
+• <b>CNOT</b> — flips qubit B only when qubit A = |1⟩<br>
+• <b>CZ</b> — adds phase −1 to |11⟩ only; natively produced by the Rydberg blockade<br>
+• <b>iSWAP</b> — swaps |01⟩↔|10⟩ with a phase of i; native in superconducting qubits<br><br>
+When a two-qubit gate acts on a superposition, the output state is often
+<b>entangled</b> — the individual qubit Bloch vectors shrink <em>inside</em> the sphere,
+showing there is no valid single-qubit description of each qubit alone.
+</div>
+""", unsafe_allow_html=True)
+
+    g_name = st.radio("Gate", list(TWO_Q_GATES.keys()), horizontal=True)
+    U2 = TWO_Q_GATES[g_name]
+
+    g_desc = {
+        "CNOT":  "Controlled-NOT. Flips B when A=|1⟩. Maps |+⟩|0⟩ → |Φ⁺⟩ (Bell state). "
+                 "Implemented via CZ + single-qubit rotations.",
+        "CZ":    "Controlled-Z. Adds −1 phase to |11⟩ only. Symmetric in A↔B. "
+                 "Directly realised via the Rydberg blockade in the Hood Lab.",
+        "iSWAP": "Swaps |01⟩↔|10⟩ with a factor of i. Two iSWAPs = SWAP. "
+                 "Native gate in superconducting transmon qubits.",
+    }
+    st.info(g_desc[g_name])
+
+    # Truth table
+    st.markdown("### Truth table")
+    basis_labels = ["|00⟩", "|01⟩", "|10⟩", "|11⟩"]
+    tt_rows = ["| Input \\|AB⟩ | Output |", "|---|---|"]
+    for j, lbl in enumerate(basis_labels):
+        e_j = np.zeros(4, dtype=complex); e_j[j] = 1.0
+        out = U2 @ e_j
+        terms = []
+        for k, c in enumerate(out):
+            if abs(c) > 1e-9:
+                if abs(c.imag) < 1e-9:
+                    pre = "" if abs(c.real - 1) < 1e-9 else ("-" if abs(c.real + 1) < 1e-9 else f"{c.real:+.2f}")
+                elif abs(c.real) < 1e-9:
+                    pre = "i" if abs(c.imag - 1) < 1e-9 else f"{c.imag:+.2f}i"
+                else:
+                    pre = f"({c.real:+.2f}{c.imag:+.2f}i)"
+                terms.append(f"{pre}{basis_labels[k]}")
+        tt_rows.append(f"| {lbl} | {'  +  '.join(terms)} |")
+    st.markdown("\n".join(tt_rows))
+
+    st.markdown("---")
+    st.markdown("### Apply the gate — watch the Bloch vectors")
+
+    col_qa, col_qb, col_out = st.columns([1, 1, 2])
+
+    with col_qa:
+        st.markdown("**Qubit A (control)**")
+        preset_a = st.selectbox("State A", list(NAMED_STATES.keys()), key="tq_a")
+        psi_a    = NAMED_STATES[preset_a].copy()
+        ta, pa   = angles_from_state(psi_a)
+        ta = st.slider("θ_A", 0.0, float(np.pi), float(ta), 0.01, key="tq_ta")
+        pa = st.slider("φ_A", 0.0, 2*float(np.pi), float(pa), 0.01, key="tq_pa")
+        psi_a = state_from_angles(ta, pa)
+
+    with col_qb:
+        st.markdown("**Qubit B (target)**")
+        preset_b = st.selectbox("State B", list(NAMED_STATES.keys()), key="tq_b")
+        psi_b    = NAMED_STATES[preset_b].copy()
+        tb, pb   = angles_from_state(psi_b)
+        tb = st.slider("θ_B", 0.0, float(np.pi), float(tb), 0.01, key="tq_tb")
+        pb = st.slider("φ_B", 0.0, 2*float(np.pi), float(pb), 0.01, key="tq_pb")
+        psi_b = state_from_angles(tb, pb)
+
+    psi_in_2q  = np.kron(psi_a, psi_b)
+    psi_out_2q = U2 @ psi_in_2q
+
+    rA_in  = reduced_bloch_vec(psi_in_2q,  0)
+    rB_in  = reduced_bloch_vec(psi_in_2q,  1)
+    rA_out = reduced_bloch_vec(psi_out_2q, 0)
+    rB_out = reduced_bloch_vec(psi_out_2q, 1)
+
+    with col_out:
+        fig_2q = build_bloch_xyz(
+            [rA_in, rB_in, rA_out, rB_out],
+            labels=["A  input", "B  input", "A  output", "B  output"],
+            colors=["#44aaff", "#aaddff", "#ff4444", "#ffaaaa"],
+            title=f"{g_name} gate — input (blue) → output (red)",
+        )
+        st.plotly_chart(fig_2q, use_container_width=True, key="tq_sphere")
+
+    r_out_A = float(np.linalg.norm(rA_out))
+    r_out_B = float(np.linalg.norm(rB_out))
+    if r_out_A < 0.99 or r_out_B < 0.99:
+        st.success(
+            f"Output is **entangled** — Bloch vectors are inside the sphere "
+            f"(|r_A| = {r_out_A:.2f}, |r_B| = {r_out_B:.2f}). "
+            "Neither qubit has a definite state on its own."
+        )
+    else:
+        st.info(
+            f"Output is a **product state** — both vectors on the surface "
+            f"(|r_A| = {r_out_A:.2f}, |r_B| = {r_out_B:.2f})."
+        )
+
+    with st.expander("🔬 Try: CNOT creates a Bell state from |+⟩|0⟩"):
+        st.markdown("""
+1. Set **qubit A = |+⟩**, **qubit B = |0⟩**, gate = **CNOT**
+2. Input: |+⟩|0⟩ = (|0⟩+|1⟩)/√2 ⊗ |0⟩ = (|00⟩ + |10⟩)/√2
+3. CNOT flips B when A=1: → **(|00⟩ + |11⟩)/√2 = |Φ⁺⟩**
+4. Watch both output Bloch vectors **shrink to the centre** — the output is
+   maximally entangled and neither qubit has a well-defined state alone.
+
+This is the exact type of entanglement the Hood Lab aims to generate between
+trapped Li and Cs atoms using the Rydberg blockade.
+""")
+
+    with st.expander("📖 Gate decompositions"):
+        st.markdown("""
+| Gate | Rydberg realisation | Superconducting realisation |
+|---|---|---|
+| CZ | Direct via blockade | Cross-resonance + calibration |
+| CNOT | CZ + H on B (before & after) | CZ decomposition |
+| iSWAP | Tunable coupling | Native capacitive coupling |
+| Universal | CZ + single-qubit gates | iSWAP + single-qubit gates |
+
+Any two-qubit entangling gate is sufficient for universality when combined with
+arbitrary single-qubit rotations (already explored in the Gates page).
 """)
