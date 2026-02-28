@@ -290,6 +290,11 @@ platforms_data = {
 }
 colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899", "#14b8a6"]
 
+def hex_to_rgba(hex_color, alpha=0.15):
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
 fig_radar = go.Figure()
 for (name, scores), color in zip(platforms_data.items(), colors):
     fig_radar.add_trace(go.Scatterpolar(
@@ -298,8 +303,7 @@ for (name, scores), color in zip(platforms_data.items(), colors):
         fill="toself",
         name=name,
         line_color=color,
-        fillcolor=color.replace(")", ", 0.12)").replace("rgb", "rgba")
-            if color.startswith("rgb") else color + "20",
+        fillcolor=hex_to_rgba(color, 0.15),
         opacity=0.85,
     ))
 
