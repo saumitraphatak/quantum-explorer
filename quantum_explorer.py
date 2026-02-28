@@ -1387,8 +1387,8 @@ With a sub-micron beam waist only a **single atom** fits in the trap.
             fig_tw = go.Figure(go.Heatmap(
                 x=r_pts * 1e6, y=z_pts * 1e6, z=I,
                 colorscale="Inferno",
-                colorbar=dict(title="Intensity", tickfont=dict(color="#ccc"),
-                              titlefont=dict(color="#ccc")),
+                colorbar=dict(title=dict(text="Intensity", font=dict(color="#ccc")),
+                             tickfont=dict(color="#ccc")),
             ))
             z_line = np.linspace(-3 * zR, 3 * zR, 300)
             w_line = w0 * np.sqrt(1 + (z_line / zR) ** 2)
@@ -2052,9 +2052,8 @@ states but not for thermal or coherent states.
                 [1.0,  "rgb(50,  130, 255)"],
             ],
             zmin=-w_abs, zmax=w_abs,
-            colorbar=dict(title="W(x,p)",
-                          tickfont=dict(color="#ccc"),
-                          titlefont=dict(color="#ccc")),
+            colorbar=dict(title=dict(text="W(x,p)", font=dict(color="#ccc")),
+                          tickfont=dict(color="#ccc")),
         ))
         fig_wg.add_trace(go.Contour(
             x=xvec, y=xvec, z=W,
