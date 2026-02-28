@@ -236,9 +236,9 @@ second) are the two most widely used qubit atoms.
             "why": "Lightest alkali. Large recoil energy enables efficient sub-Doppler cooling. Strong Feshbach resonances allow tunable interactions. Li-6 is the primary fermionic atom for strongly-correlated physics.",
             "lines": "D1: 670.992 nm  |  D2: 670.977 nm  |  Γ/2π = 5.87 MHz",
             "qubit": "Li-7 |F=1⟩↔|F=2⟩ hyperfine qubit (803 MHz); Li-6 used for fermionic qubits",
-            "steck_6": "https://steck.us/alkalidata/lithium6numbers.pdf",
-            "steck_7": "https://steck.us/alkalidata/lithiumdata.pdf",
-            "arxiv": "arXiv:1007.3348 — Gehm, Properties of ⁶Li",
+            "steck_6": "https://jet.physics.ncsu.edu/techdocs/pdf/PropertiesOfLi.pdf",
+            "steck_7": None,
+            "arxiv": "Gehm (2003) — Properties of ⁶Li [NCSU]",
             "color": "#ff8844",
         },
         "²³Na  — Sodium": {
@@ -254,9 +254,9 @@ second) are the two most widely used qubit atoms.
             "why": "K-40 is the only naturally abundant fermionic alkali; key for Fermi-Hubbard model simulations. K-39 has accessible Feshbach resonances. All isotopes share the same 767/770 nm D-lines (diode laser accessible).",
             "lines": "D1: 770.108 nm  |  D2: 766.701 nm  |  Γ/2π = 6.04 MHz",
             "qubit": "K-39: |1,−1⟩↔|2,2⟩ clock-like transition",
-            "steck_6": "https://steck.us/alkalidata/potassiumnumbers.pdf",
+            "steck_6": "http://www.tobiastiecke.nl/archive/PotassiumProperties.pdf",
             "steck_7": None,
-            "arxiv": "arXiv:0906.2888 — Falke et al., K spectroscopy",
+            "arxiv": "Tiecke (2010) — Properties of Potassium",
             "color": "#aa44ff",
         },
         "⁸⁵Rb / ⁸⁷Rb  — Rubidium": {
@@ -289,10 +289,10 @@ second) are the two most widely used qubit atoms.
                 st.markdown(f"**Further reading:** {info['arxiv']}")
             with c2:
                 st.markdown("**Data sheets:**")
-                st.markdown(f"📄 [Primary Steck data sheet]({info['steck_6']})")
+                st.markdown(f"📄 [Primary data sheet]({info['steck_6']})")
                 if info["steck_7"]:
                     st.markdown(f"📄 [Second isotope data sheet]({info['steck_7']})")
-                st.markdown("📚 [All Steck alkali data](https://steck.us/alkalidata/)")
+                st.markdown("📚 [Steck alkali data index](https://steck.us/alkalidata/)")
                 st.markdown("🔗 [NIST Atomic Spectra DB](https://physics.nist.gov/asd)")
 
 
@@ -315,8 +315,8 @@ electronic state — ideal for optical-clock quantum computing.
             "lines": "Broad: 461 nm (Γ/2π=32 MHz)  |  Narrow: 689 nm (Γ/2π=7.6 kHz)  |  Clock: 698 nm (~1 mHz)",
             "qubit": "Sr-87 nuclear spin qubit |mI=−9/2⟩↔|mI=−7/2⟩ via the 698 nm clock transition",
             "resources": [
-                ("📄 Boyd PhD thesis (Ye Lab) — Sr spectroscopy", "https://jila.colorado.edu/sites/default/files/assets/files/thesis_dissertation/Boyd_Thesis.pdf"),
-                ("📄 Stellmer review — Sr BEC and degenerate gases", "https://arxiv.org/abs/1307.0506"),
+                ("📄 Boyd PhD thesis (Ye Lab) — Sr spectroscopy", "https://jila.colorado.edu/sites/default/files/2019-05/boyd_thesis.pdf"),
+                ("📄 Stellmer review — Sr BEC and degenerate gases", "https://arxiv.org/abs/1307.0601"),
                 ("🔗 NIST Atomic Spectra — Sr", "https://physics.nist.gov/cgi-bin/ASD/lines1.pl?spectra=Sr"),
                 ("📦 ARC library (Python)", "https://arc-alkali-rydberg-calculator.readthedocs.io/"),
             ],
@@ -327,7 +327,7 @@ electronic state — ideal for optical-clock quantum computing.
             "qubit": "Yb-171 |mI=+1/2⟩↔|mI=−1/2⟩ nuclear spin qubit (zero magnetic field insensitive)",
             "resources": [
                 ("📄 Ludlow et al. — Optical atomic clocks (RMP 2015)", "https://arxiv.org/abs/1407.3493"),
-                ("📄 Taichenachev et al. — Yb spectroscopy", "https://arxiv.org/abs/0611719"),
+                ("📄 Barber/Taichenachev et al. — Direct excitation of Yb clock transition", "https://arxiv.org/abs/physics/0512084"),
                 ("🔗 NIST Atomic Spectra — Yb", "https://physics.nist.gov/cgi-bin/ASD/lines1.pl?spectra=Yb"),
                 ("📦 ARC library (Python)", "https://arc-alkali-rydberg-calculator.readthedocs.io/"),
             ],
@@ -363,7 +363,7 @@ interaction BECs.  Dy has the largest magnetic moment of any element (10 μB).
             "why": "Dy-164 has the largest magnetic moment of any element (10 μB), enabling strong dipolar interactions and anisotropic collisional physics. Used for dipolar BEC, quantum droplets, and supersolid phases. Cooled on a broad 421 nm line.",
             "lines": "Main: 421 nm (broad)  |  421 nm, 598 nm, 626 nm intercombination lines",
             "resources": [
-                ("📄 Lu et al. (Lev) — Strongly dipolar Bose-Einstein condensate", "https://arxiv.org/abs/1101.4626"),
+                ("📄 Lu et al. (Lev) — Strongly dipolar Bose-Einstein condensate", "https://arxiv.org/abs/1108.5993"),
                 ("📄 Chomaz et al. — Dipolar physics review (RMP 2023)", "https://arxiv.org/abs/2201.02672"),
             ],
         },
@@ -371,7 +371,7 @@ interaction BECs.  Dy has the largest magnetic moment of any element (10 μB).
             "why": "Er-168 has a magnetic moment of 7 μB and a rich level structure. Dipolar BEC demonstrated by Ferrier-Barbut/Pfau group (Stuttgart) and Grimm group (Innsbruck). Anisotropic scattering leads to distinctive many-body phases.",
             "lines": "Main: 401 nm  |  583 nm intercombination line",
             "resources": [
-                ("📄 Aikawa et al. — Bose-Einstein condensation of Er", "https://arxiv.org/abs/1205.6813"),
+                ("📄 Aikawa et al. — Bose-Einstein condensation of Er", "https://arxiv.org/abs/1204.1725"),
                 ("📄 Chomaz et al. — Dipolar physics review (RMP 2023)", "https://arxiv.org/abs/2201.02672"),
             ],
         },
@@ -407,38 +407,38 @@ groups = {
     "⁸⁷Rb — Quantum Computing & Simulation": [
         ("Lukin Lab", "Harvard", "Rydberg tweezer quantum processor; many-body physics", "https://lukin.physics.harvard.edu"),
         ("Greiner Lab", "Harvard", "Quantum simulation, Hubbard model, quantum gas microscope", "https://greiner.physics.harvard.edu"),
-        ("Saffman Lab", "Wisconsin", "Rydberg two-qubit gates, trapped-atom qubits", "https://saffman.physics.wisc.edu"),
-        ("Kaufman Lab", "Colorado/JILA", "Tweezer arrays, quantum optics with atoms", "https://www.colorado.edu/lab/kaufman"),
-        ("Bernien Lab", "UChicago", "Programmable quantum matter, Rydberg arrays", "https://bernien.uchicago.edu"),
-        ("Weiss Lab", "Penn State", "Neutral atom qubits, quantum computing", "https://www.phys.psu.edu/people/daw11"),
+        ("Saffman Lab", "Wisconsin", "Rydberg two-qubit gates, trapped-atom qubits", "https://qpal.physics.wisc.edu"),
+        ("Kaufman Lab", "Colorado/JILA", "Tweezer arrays, quantum optics with atoms", "https://jila.colorado.edu/kaufman"),
+        ("Bernien Lab", "Innsbruck/UChicago", "Programmable quantum matter, Rydberg arrays", "https://bernienlab.com"),
+        ("Weiss Lab", "Penn State", "Neutral atom qubits, quantum computing", "https://sites.psu.edu/dsweiss/"),
     ],
     "¹³³Cs — Quantum Computing & Molecules": [
         ("Chin Lab", "UChicago", "Strongly correlated gases, Efimov physics, BEC", "https://ultracold.uchicago.edu"),
         ("Hood Lab", "Purdue", "Li-Cs molecule assembly, optical tweezers, single-atom control", "https://hoodlab.physics.purdue.edu"),
     ],
     "⁶Li / ⁷Li — Fermi Gases & Molecules": [
-        ("Hulet Lab", "Rice", "Li-6 Fermi gases, BEC-BCS crossover, solitons", "https://hulet.rice.edu"),
-        ("Zwierlein Lab", "MIT", "Degenerate Fermi gases, fermionic superfluidity", "https://www.mit.edu/~zwierlein"),
-        ("DeMarco Lab", "UIUC", "Fermi-Hubbard model, disordered lattices", "https://deMarco.physics.illinois.edu"),
+        ("Hulet Lab", "Rice", "Li-6 Fermi gases, BEC-BCS crossover, solitons", "http://atomcool.rice.edu"),
+        ("Zwierlein Lab", "MIT", "Degenerate Fermi gases, fermionic superfluidity", "https://quantumgas.mit.edu"),
+        ("DeMarco Lab", "UIUC", "Fermi-Hubbard model, disordered lattices", "https://research.physics.illinois.edu/demarco/research.htm"),
         ("Hood Lab", "Purdue", "Li-Cs molecules in tweezers", "https://hoodlab.physics.purdue.edu"),
     ],
     "²³Na & ¹⁹K — Molecules & BEC": [
-        ("Ketterle Lab", "MIT", "First BEC (Nobel 2001); spinor BECs; NaLi molecules", "https://ketterle.mit.edu"),
-        ("Park Lab", "MIT", "NaLi and NaK ultracold molecules", "https://www.rle.mit.edu/park-lab"),
-        ("Ni Lab", "Harvard", "Ultracold polar molecules (NaK, KRb)", "https://ni.chem.harvard.edu"),
+        ("Ketterle Lab", "MIT", "First BEC (Nobel 2001); spinor BECs; NaLi molecules", "https://cua.mit.edu/groups/ketterle-group/"),
+        ("Zwierlein Lab", "MIT", "NaLi and NaK ultracold molecules; Fermi gases", "https://quantumgas.mit.edu"),
+        ("Ni Lab", "Harvard", "Ultracold polar molecules (NaCs, KRb)", "https://kni.faculty.chemistry.harvard.edu"),
     ],
     "⁸⁸Sr / ⁸⁷Sr — Optical Clocks & Simulation": [
-        ("Ye Lab", "JILA/Colorado", "World-leading optical lattice clock; Sr tweezer arrays; quantum simulation", "https://jila.colorado.edu/yelab"),
+        ("Ye Lab", "JILA/Colorado", "World-leading optical lattice clock; Sr tweezer arrays; quantum simulation", "https://jila.colorado.edu/yelabs"),
         ("Killian Lab", "Rice", "Sr BEC and tweezer arrays, Rydberg excitation", "https://ultracold.rice.edu"),
-        ("Thompson Lab", "Princeton", "Sr cavity QED, quantum networking", "https://thompsonlab.physics.princeton.edu"),
-        ("Covey Lab", "UIUC", "Tweezer arrays with alkaline-earth atoms", "https://covey.physics.illinois.edu"),
-        ("Rey Lab (theory)", "JILA/Colorado", "AMO theory for Sr, Yb quantum simulation", "https://jila.colorado.edu/reygroup"),
+        ("Thompson Lab", "Princeton", "Sr cavity QED, quantum networking", "https://sites.google.com/site/thompsonlabq/home"),
+        ("Covey Lab", "UIUC", "Tweezer arrays with alkaline-earth atoms", "https://sites.google.com/view/coveylab/"),
+        ("Rey Lab (theory)", "JILA/Colorado", "AMO theory for Sr, Yb quantum simulation", "https://jila.colorado.edu/arey"),
     ],
     "¹⁷⁴Yb / ¹⁷¹Yb — Clocks & Quantum Computing": [
-        ("Ye Lab", "JILA/Colorado", "Yb optical lattice clock; quantum simulation with Yb", "https://jila.colorado.edu/yelab"),
-        ("Kaufman Lab", "Colorado", "Yb tweezer arrays; quantum optics", "https://www.colorado.edu/lab/kaufman"),
-        ("Porto/Spielman Lab", "NIST/Maryland", "Optical lattices, synthetic gauge fields", "https://www.nist.gov/pml/quantum-measurement/laser-cooling-and-trapping-group"),
-        ("Thompson Lab", "Princeton", "Yb cavity QED", "https://thompsonlab.physics.princeton.edu"),
+        ("Ye Lab", "JILA/Colorado", "Yb optical lattice clock; quantum simulation with Yb", "https://jila.colorado.edu/yelabs"),
+        ("Kaufman Lab", "Colorado", "Yb tweezer arrays; quantum optics", "https://jila.colorado.edu/kaufman"),
+        ("Spielman Lab", "NIST/Maryland", "Optical lattices, synthetic gauge fields", "https://www.nist.gov/people/ian-spielman"),
+        ("Thompson Lab", "Princeton", "Yb cavity QED", "https://sites.google.com/site/thompsonlabq/home"),
     ],
     "¹⁶⁴Dy / ¹⁶⁸Er — Dipolar Physics": [
         ("Lev Lab", "Stanford", "Dy and Er dipolar gases, quantum magnetism", "https://levlab.stanford.edu"),
@@ -470,14 +470,13 @@ col_r1, col_r2, col_r3 = st.columns(3)
 with col_r1:
     st.markdown("### Data Sheets")
     st.markdown("""
-**Steck Alkali Data Sheets** *(the gold standard)*
-- [Li-6](https://steck.us/alkalidata/lithium6numbers.pdf)
-- [Li-7](https://steck.us/alkalidata/lithiumdata.pdf)
-- [Na-23](https://steck.us/alkalidata/sodiumnumbers.pdf)
-- [K-39/40/41](https://steck.us/alkalidata/potassiumnumbers.pdf)
-- [Rb-85](https://steck.us/alkalidata/rubidium85numbers.pdf)
-- [Rb-87](https://steck.us/alkalidata/rubidium87numbers.pdf)
-- [Cs-133](https://steck.us/alkalidata/cesiumnumbers.pdf)
+**Alkali Data Sheets**
+- [Li-6 properties — Gehm (NCSU)](https://jet.physics.ncsu.edu/techdocs/pdf/PropertiesOfLi.pdf)
+- [Na-23 — Steck](https://steck.us/alkalidata/sodiumnumbers.pdf)
+- [K properties — Tiecke](http://www.tobiastiecke.nl/archive/PotassiumProperties.pdf)
+- [Rb-85 — Steck](https://steck.us/alkalidata/rubidium85numbers.pdf)
+- [Rb-87 — Steck](https://steck.us/alkalidata/rubidium87numbers.pdf)
+- [Cs-133 — Steck](https://steck.us/alkalidata/cesiumnumbers.pdf)
 - [All Steck sheets →](https://steck.us/alkalidata/)
 """)
 
