@@ -69,6 +69,82 @@ body { background-color: #0d0d1a; }
 }
 .highlight { color: #f0c040; font-weight: bold; }
 h1, h2, h3 { color: #c8b8ff; }
+
+/* ── New styles ── */
+.page-banner {
+    background: #0f1a2e;
+    border: 1px solid #2a3a5e;
+    border-radius: 7px;
+    padding: 10px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.page-banner-label {
+    font-size: 0.78rem;
+    color: #7b90c4;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 600;
+}
+.page-banner-text {
+    font-size: 0.88rem;
+    color: #a8b8d8;
+}
+.track-badge {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 2px 9px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-right: 4px;
+}
+.track-a { background: #1a2e4a; color: #60a5fa; }
+.track-b { background: #1e2a1e; color: #4ade80; }
+.track-c { background: #2d1e3e; color: #c084fc; }
+
+.page-card {
+    background: #10102a;
+    border: 1px solid #2a2a50;
+    border-radius: 10px;
+    padding: 16px 18px;
+    height: 100%;
+}
+.page-card-icon { font-size: 1.5rem; margin-bottom: 6px; }
+.page-card-title { font-size: 0.95rem; font-weight: 600; color: #c8b8ff; margin-bottom: 5px; }
+.page-card-desc { font-size: 0.83rem; color: #8898bb; line-height: 1.55; }
+.page-card-tag { font-size: 0.72rem; color: #5a6a8a; margin-top: 8px; }
+
+.path-box {
+    background: #0c1520;
+    border: 1px solid #1e3050;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 8px 0;
+}
+.path-title { font-size: 0.85rem; font-weight: 600; color: #a0b0d0; margin-bottom: 6px; }
+.path-steps { font-size: 0.82rem; color: #6880a8; line-height: 1.7; }
+
+.sidebar-desc {
+    background: #0f1828;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.80rem;
+    color: #7a90b8;
+    line-height: 1.55;
+    margin-top: 8px;
+}
+.sidebar-section {
+    font-size: 0.70rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #4a5a7a;
+    margin: 10px 0 4px 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -424,6 +500,11 @@ def bloch_with_traj(sx, sy, sz, label="ψ(t)",
 # ═══════════════════════════════════════════════════════════════
 
 st.sidebar.markdown("## ⚛️ Quantum Explorer")
+st.sidebar.markdown(
+    "<div style='font-size:0.78rem;color:#5a6a8a;margin:-6px 0 10px 0'>"
+    "Interactive quantum physics — no prior background needed</div>",
+    unsafe_allow_html=True,
+)
 st.sidebar.markdown("---")
 
 PAGES = [
@@ -440,15 +521,88 @@ PAGES = [
     "📉  Decoherence",
     "🌊  Wigner Function",
 ]
+
+# Brief description shown below the radio for each page
+PAGE_INFO = {
+    PAGES[0]:  ("Quantum Basics",    "Overview and guide — start here to find your path through the app."),
+    PAGES[1]:  ("Quantum Basics",    "Visualise a single qubit as a point on a 3D sphere. Drag sliders to explore."),
+    PAGES[2]:  ("Quantum Basics",    "Apply quantum gates and watch the qubit state rotate in real time."),
+    PAGES[3]:  ("Quantum Basics",    "Explore superposition amplitudes and wave interference interactively."),
+    PAGES[4]:  ("Quantum Computing", "Simulate Born-rule measurements — see how randomness emerges from quantum states."),
+    PAGES[5]:  ("Quantum Computing", "Prepare Bell states and observe perfect two-qubit correlations."),
+    PAGES[6]:  ("AMO Physics",       "Doppler cooling & optical tweezers — the technology behind the Hood Lab experiments."),
+    PAGES[7]:  ("AMO Physics",       "Rydberg blockade scaling laws and how neutral-atom two-qubit gates work."),
+    PAGES[8]:  ("Quantum Computing", "CNOT, CZ, iSWAP — see how entangling gates create two-qubit correlations."),
+    PAGES[9]:  ("Quantum Computing", "Watch a laser drive coherent oscillations between qubit states."),
+    PAGES[10]: ("Quantum Computing", "Explore T₁ energy relaxation and T₂ dephasing — why real qubits lose information."),
+    PAGES[11]: ("AMO Physics",       "Phase-space portraits of motional quantum states — the Wigner function and sideband cooling."),
+}
+
+SECTION_HEADERS = {
+    PAGES[0]: "— Quantum Basics —",
+    PAGES[4]: "— Quantum Computing —",
+    PAGES[6]: "— AMO Physics —",
+    PAGES[8]: None,   # continuation, no new header
+}
+
+st.sidebar.markdown(
+    "<div class='sidebar-section'>Navigate</div>", unsafe_allow_html=True
+)
 page = st.sidebar.radio("Navigate", PAGES, label_visibility="collapsed")
 
+# Show description of current page
+cat, desc = PAGE_INFO.get(page, ("", ""))
+cat_color = {"Quantum Basics": "#60a5fa", "Quantum Computing": "#4ade80", "AMO Physics": "#c084fc"}.get(cat, "#aaa")
+st.sidebar.markdown(
+    f"<div class='sidebar-desc'>"
+    f"<span style='color:{cat_color};font-weight:600;font-size:0.72rem;"
+    f"text-transform:uppercase;letter-spacing:0.07em'>{cat}</span><br>"
+    f"{desc}</div>",
+    unsafe_allow_html=True,
+)
+
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<small style='color:#666'>
-Built with Streamlit + Plotly<br>
-No physics background required!
-</small>
-""", unsafe_allow_html=True)
+
+with st.sidebar.expander("📍 Recommended paths"):
+    st.markdown("""
+**New to quantum?**
+Introduction → Bloch Sphere → Superposition → Measurement → Entanglement
+
+**Quantum computing focus:**
+Bloch Sphere → Gates → Rabi Oscillations → Two-Qubit Gates → Decoherence
+
+**Research context (AMO):**
+Laser Cooling → Rydberg Atoms → Wigner Function
+""")
+
+st.sidebar.markdown(
+    "<div style='font-size:0.73rem;color:#3a4a6a;margin-top:8px'>"
+    "Built with Streamlit · Plotly · QuTiP</div>",
+    unsafe_allow_html=True,
+)
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE BANNER HELPER
+# ═══════════════════════════════════════════════════════════════
+
+def page_banner(use_for: str, what_to_do: str, prereq: str = ""):
+    """Render a compact use-case banner at the top of a content page."""
+    prereq_html = (
+        f"&nbsp;&nbsp;<span style='color:#4a5a7a'>·</span>&nbsp;&nbsp;"
+        f"<span style='color:#4a6080'><b>Prereq:</b> {prereq}</span>"
+        if prereq else ""
+    )
+    st.markdown(
+        f"<div class='page-banner'>"
+        f"<span class='page-banner-label'>Use this page to</span>"
+        f"<span class='page-banner-text'>{what_to_do}</span>"
+        f"<span style='flex:1'></span>"
+        f"<span style='color:#3a5070;font-size:0.78rem'><b>Audience:</b> {use_for}</span>"
+        f"{prereq_html}"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -603,58 +757,135 @@ TWO_Q_GATES = {"CNOT": CNOT, "CZ": CZ, "iSWAP": ISWAP}
 
 if page == PAGES[0]:
     st.title("⚛️ Quantum Physics Explorer")
-    st.markdown("#### An interactive guide to quantum computing fundamentals")
+    st.markdown(
+        "<p style='font-size:1.05rem;color:#8898bb;margin-top:-8px;margin-bottom:24px'>"
+        "An interactive guide to quantum computing and AMO physics — built by "
+        "<a href='https://www.curious96.com' style='color:#7b68ee'>Saumitra Phatak</a>, "
+        "Hood Lab, Purdue University.</p>",
+        unsafe_allow_html=True,
+    )
 
     st.markdown("""
 <div class='concept-box'>
-<b>Welcome!</b> This app lets you <em>see</em> and <em>feel</em> the core ideas behind quantum computing —
-no maths degree required. Each section gives you a brief explanation and then hands you the
-controls so you can explore the concept yourself in real time.
-<br><br>
-Quantum computers harness strange quantum phenomena — <b>superposition</b>, <b>entanglement</b>, and
-<b>interference</b> — to solve certain problems exponentially faster than classical computers.
+<b>What is this app?</b><br><br>
+This is an interactive sandbox for exploring the ideas that underpin quantum computing and
+atomic physics experiments — without needing a physics degree.
+Every page gives you a short explanation followed by real controls: sliders, dropdowns, and
+live plots that update as you explore.<br><br>
+The app covers two connected threads: the <b>fundamentals of quantum computing</b>
+(qubits, gates, entanglement, decoherence) and the <b>AMO physics techniques</b>
+used in optical tweezer experiments — laser cooling, Rydberg atoms, and motional quantum states.
+The latter topics connect directly to the research in the Hood Lab at Purdue.
 </div>
 """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-**🔵 Bloch Sphere**
-The geometric picture of a single quantum bit (qubit).
-Drag the angles and watch the state vector move in 3-D space.
-""")
-    with col2:
-        st.markdown("""
-**🔀 Quantum Gates**
-Quantum gates are rotations on the Bloch sphere.
-Apply real gate matrices and see exactly what they do.
-""")
-    with col3:
-        st.markdown("""
-**〰️ Superposition**
-A qubit can be 0 *and* 1 at the same time.
-Control the amplitudes and see how probabilities arise.
-""")
+    # ── Audience tracks ──────────────────────────────────────────
+    st.markdown("### Who is this for?")
+    ta, tb, tc = st.columns(3)
 
-    col4, col5, col6 = st.columns(3)
-    with col4:
+    with ta:
         st.markdown("""
-**📏 Measurement**
-Looking at a qubit forces it to choose 0 or 1.
-Simulate thousands of measurements and see the Born rule in action.
-""")
-    with col5:
+<div class='page-card'>
+<div class='page-card-icon'>🎓</div>
+<div class='page-card-title'>Curious newcomers</div>
+<div class='page-card-desc'>No physics background needed.
+You'll build intuition for superposition, measurement, and entanglement
+through interactive visualisations before any equations appear.</div>
+<div class='page-card-tag'>Start with: Bloch Sphere → Superposition → Measurement</div>
+</div>""", unsafe_allow_html=True)
+
+    with tb:
         st.markdown("""
-**🔗 Entanglement**
-Two qubits can share a quantum connection across any distance.
-Explore all four Bell states and their perfect correlations.
-""")
-    with col6:
+<div class='page-card'>
+<div class='page-card-icon'>💻</div>
+<div class='page-card-title'>Quantum computing learners</div>
+<div class='page-card-desc'>Understand how qubits are manipulated,
+how gates create entanglement, why decoherence limits real hardware,
+and how Rydberg atoms implement two-qubit gates.</div>
+<div class='page-card-tag'>Start with: Gates → Two-Qubit Gates → Decoherence</div>
+</div>""", unsafe_allow_html=True)
+
+    with tc:
         st.markdown("""
-**Getting started**
-Use the sidebar to jump between topics.
-Every page has sliders and knobs — just play!
-""")
+<div class='page-card'>
+<div class='page-card-icon'>🔬</div>
+<div class='page-card-title'>AMO / research context</div>
+<div class='page-card-desc'>Understand the physics behind optical tweezer experiments —
+laser cooling, Doppler forces, trap potentials, Rydberg blockade, and Wigner functions
+for motional quantum states.</div>
+<div class='page-card-tag'>Start with: Laser Cooling → Rydberg Atoms → Wigner Function</div>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Page index grouped by category ───────────────────────────
+    st.markdown("### What's on each page")
+
+    st.markdown(
+        "<div style='font-size:0.78rem;font-weight:700;letter-spacing:0.08em;"
+        "text-transform:uppercase;color:#60a5fa;margin:14px 0 8px 0'>Quantum Basics</div>",
+        unsafe_allow_html=True,
+    )
+    b1, b2, b3, b4 = st.columns(4)
+    basics = [
+        ("🔵", "Bloch Sphere", "Visualise any qubit state as a vector on a 3D sphere. Drag angles, apply presets, see coordinates update live."),
+        ("〰️", "Superposition", "Control the complex amplitudes α and β. Watch interference patterns form and disappear."),
+        ("📏", "Measurement", "Simulate the Born rule. Run 1 to 1000 shots and see how quantum randomness gives way to statistics."),
+        ("🔗", "Entanglement", "Prepare all four Bell states, simulate correlated measurements, visualise the joint Bloch vectors."),
+    ]
+    for col, (icon, title, desc) in zip([b1, b2, b3, b4], basics):
+        with col:
+            st.markdown(f"""
+<div class='page-card'>
+<div class='page-card-icon'>{icon}</div>
+<div class='page-card-title'>{title}</div>
+<div class='page-card-desc'>{desc}</div>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown(
+        "<div style='font-size:0.78rem;font-weight:700;letter-spacing:0.08em;"
+        "text-transform:uppercase;color:#4ade80;margin:18px 0 8px 0'>Quantum Computing</div>",
+        unsafe_allow_html=True,
+    )
+    c1, c2, c3, c4, c5 = st.columns(5)
+    computing = [
+        ("🔀", "Quantum Gates", "Apply X, H, S, T, and custom rotation gates. See exactly how each gate moves the Bloch vector."),
+        ("🔢", "Two-Qubit Gates", "CNOT, CZ, iSWAP — entangling operations. See the reduced Bloch spheres shrink as entanglement grows."),
+        ("🌀", "Rabi Oscillations", "Drive a qubit with a resonant laser. Explore on-resonance inversion and detuned oscillations."),
+        ("📉", "Decoherence", "Set T₁ and T₂ times and watch the Bloch vector decay. See why real qubits lose quantum information."),
+        ("⚡", "Rydberg Atoms", "Rydberg scaling laws and the blockade mechanism — how neutral atoms perform entangling gates."),
+    ]
+    for col, (icon, title, desc) in zip([c1, c2, c3, c4, c5], computing):
+        with col:
+            st.markdown(f"""
+<div class='page-card'>
+<div class='page-card-icon'>{icon}</div>
+<div class='page-card-title'>{title}</div>
+<div class='page-card-desc'>{desc}</div>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown(
+        "<div style='font-size:0.78rem;font-weight:700;letter-spacing:0.08em;"
+        "text-transform:uppercase;color:#c084fc;margin:18px 0 8px 0'>AMO Physics & Research Context</div>",
+        unsafe_allow_html=True,
+    )
+    r1, r2, r3 = st.columns(3)
+    research = [
+        ("🌡️", "Laser Cooling & Tweezers",
+         "Doppler cooling force, Sisyphus cooling, and the dipole trap potential. Choose ⁶Li or ¹³³Cs — the atoms used in Saumitra's experiments."),
+        ("🌊", "Wigner Function",
+         "Phase-space representation of motional quantum states inside an optical tweezer. Visualise Fock states, coherent states, and squeezed states."),
+        ("⚡", "Rydberg Atoms",
+         "How excited Rydberg atoms interact, the blockade radius, and how this enables the CZ gate central to neutral-atom quantum processors."),
+    ]
+    for col, (icon, title, desc) in zip([r1, r2, r3], research):
+        with col:
+            st.markdown(f"""
+<div class='page-card'>
+<div class='page-card-icon'>{icon}</div>
+<div class='page-card-title'>{title}</div>
+<div class='page-card-desc'>{desc}</div>
+</div>""", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("#### Key Vocabulary")
@@ -708,6 +939,7 @@ Every page has sliders and knobs — just play!
 
 elif page == PAGES[1]:
     st.title("🔵 The Bloch Sphere")
+    page_banner("Everyone — no prerequisites", "Build geometric intuition for a qubit state by dragging it around a 3D sphere")
 
     st.markdown("""
 <div class='concept-box'>
@@ -790,6 +1022,7 @@ The **global phase** e^(iγ) is unobservable — only the **relative phase** φ 
 
 elif page == PAGES[2]:
     st.title("🔀 Quantum Gates")
+    page_banner("Everyone", "Apply real quantum gates and see exactly how they rotate a qubit on the Bloch sphere", "Bloch Sphere helps")
 
     st.markdown("""
 <div class='concept-box'>
@@ -905,6 +1138,7 @@ the state vector rotate on the sphere.
 
 elif page == PAGES[3]:
     st.title("〰️ Superposition & Interference")
+    page_banner("Everyone", "Control amplitudes interactively and watch interference patterns appear and cancel")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1007,6 +1241,7 @@ H then H brings it back to |0⟩ — <b>destructive interference</b> kills the |
 
 elif page == PAGES[4]:
     st.title("📏 Measurement")
+    page_banner("Everyone", "Simulate quantum measurements and see how the Born rule turns amplitudes into statistics", "Superposition helps")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1077,6 +1312,7 @@ by first applying the right rotation gate.
 
 elif page == PAGES[5]:
     st.title("🔗 Quantum Entanglement")
+    page_banner("Everyone", "Prepare Bell states, simulate correlated measurements, and see why entanglement has no classical explanation", "Measurement helps")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1228,6 +1464,7 @@ to compare results, which is limited to the speed of light.
 
 elif page == PAGES[6]:
     st.title("🌡️ Laser Cooling & Optical Tweezers")
+    page_banner("General audience / AMO context", "Explore Doppler cooling forces and optical trap potentials for ⁶Li and ¹³³Cs — the atoms in the Hood Lab")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1425,6 +1662,7 @@ With a sub-micron beam waist only a **single atom** fits in the trap.
 
 elif page == PAGES[7]:
     st.title("⚡ Rydberg Atoms & Quantum Gate")
+    page_banner("QC learners / AMO context", "See how Rydberg blockade enables two-qubit gates in neutral-atom processors — the platform this research contributes to", "Entanglement helps")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1586,6 +1824,7 @@ Result: |00⟩, |01⟩, |10⟩ unchanged; |11⟩ → −|11⟩ &nbsp;=&nbsp; <b>
 
 elif page == PAGES[8]:
     st.title("🔢 Two-Qubit Gates")
+    page_banner("QC learners", "Apply CNOT, CZ, and iSWAP gates — see how entanglement is created and how reduced Bloch vectors shrink", "Quantum Gates + Entanglement")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1718,6 +1957,7 @@ arbitrary single-qubit rotations (already explored in the Gates page).
 
 elif page == PAGES[9]:
     st.title("🌀 Rabi Oscillations")
+    page_banner("QC learners / AMO context", "Drive a two-level atom with a laser and observe coherent oscillations — the basic mechanism behind every qubit gate")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1829,6 +2069,7 @@ Starting from |0⟩, the excited-state probability at time t is:
 
 elif page == PAGES[10]:
     st.title("📉 Decoherence — T₁ & T₂")
+    page_banner("QC learners", "Set T₁ and T₂ times and watch quantum information fade — the central engineering challenge for all qubit platforms", "Bloch Sphere helps")
 
     st.markdown("""
 <div class='concept-box'>
@@ -1954,6 +2195,7 @@ state (inside the sphere) as the qubit entangles with its environment.
 
 elif page == PAGES[11]:
     st.title("🌊 Wigner Function & Motional States")
+    page_banner("AMO physics context", "Visualise motional quantum states of a trapped atom in phase space — directly relevant to sideband cooling in the Hood Lab", "Laser Cooling helps")
 
     st.markdown("""
 <div class='concept-box'>
