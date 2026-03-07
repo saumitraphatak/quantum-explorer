@@ -5,8 +5,10 @@ Calculator and reference tables for ⟨j₁m₁; j₂m₂ | JM⟩.
 Also covers the Wigner–Eckart theorem.
 """
 
+import math
 import streamlit as st
 import pandas as pd
+from fractions import Fraction
 
 st.set_page_config(
     page_title="Clebsch–Gordan Coefficients",
@@ -63,13 +65,57 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Sympy ────────────────────────────────────────────────────────────────────
-try:
-    from sympy.physics.quantum.cg import CG
-    from sympy import Rational
-    HAS_SYMPY = True
-except ImportError:
-    HAS_SYMPY = False
+# ─── Pure-Python CG via Racah formula (no external deps) ─────────────────────
+
+def _cg_float(j1, m1, j2, m2, J, M):
+    """CG coefficient as float via Racah formula (Condon–Shortley convention)."""
+    def F(x):
+        n = int(round(x))
+        return float(math.factorial(n)) if n >= 0 else None
+
+    fs = [F(j1+j2-J), F(j1-j2+J), F(-j1+j2+J), F(j1+j2+J+1)]
+    if None in fs or fs[3] == 0: return 0.0
+    delta = fs[0] * fs[1] * fs[2] / fs[3]
+
+    pf = [F(j1+m1), F(j1-m1), F(j2+m2), F(j2-m2), F(J+M), F(J-M)]
+    if None in pf: return 0.0
+    pref_sq = (2*J + 1) * delta
+    for f in pf: pref_sq *= f
+
+    nu_min = max(0, int(round(j2 - J - m1)), int(round(j1 - J + m2)))
+    nu_max = int(round(min(j1 + j2 - J, j1 - m1, j2 + m2)))
+
+    total = 0.0
+    for nu in range(nu_min, nu_max + 1):
+        terms = [F(nu), F(j1+j2-J-nu), F(j1-m1-nu),
+                 F(j2+m2-nu), F(J-j2+m1+nu), F(J-j1-m2+nu)]
+        if None in terms: continue
+        denom = 1.0
+        for t in terms: denom *= t
+        total += (-1)**nu / denom
+
+    return 0.0 if abs(total) < 1e-15 else math.sqrt(abs(pref_sq)) * total
+
+def _exact_str(value):
+    """Express float CG value as ±√(p/q) or integer string."""
+    if abs(value) < 1e-10: return "0"
+    sign = "−" if value < 0 else ""
+    v_sq = value**2
+    frac = Fraction(v_sq).limit_denominator(10000)
+    p, q = frac.numerator, frac.denominator
+    if abs(math.sqrt(p / q) - abs(value)) > 1e-7:
+        return f"{sign}{abs(value):.6f}"
+    if p == q: return f"{sign}1"
+    g = math.gcd(p, q); p //= g; q //= g
+    sqp = int(round(math.sqrt(p))); sqq = int(round(math.sqrt(q)))
+    if sqp*sqp == p and sqq*sqq == q:   # both perfect squares → integer ratio
+        g2 = math.gcd(sqp, sqq)
+        return f"{sign}{sqp//g2}/{sqq//g2}"
+    if sqp*sqp == p:                     # numerator is perfect square
+        return (f"{sign}1/√{q}" if sqp == 1 else f"{sign}{sqp}/√{q}")
+    if sqq*sqq == q:                     # denominator is perfect square
+        return (f"{sign}√{p}" if sqq == 1 else f"{sign}√{p}/{sqq}")
+    return f"{sign}√({p}/{q})"
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -99,19 +145,14 @@ def allowed_J(j1, j2):
 
 def cg(j1, m1, j2, m2, J, M):
     """Return (exact_string, float_value) for ⟨j₁m₁;j₂m₂|JM⟩."""
-    # Selection rules
     if abs(round(2 * (m1 + m2)) - round(2 * M)) != 0:
         return "0", 0.0
     if J < abs(j1 - j2) - 1e-9 or J > j1 + j2 + 1e-9:
         return "0", 0.0
     if abs(m1) > j1 + 1e-9 or abs(m2) > j2 + 1e-9 or abs(M) > J + 1e-9:
         return "0", 0.0
-    if not HAS_SYMPY:
-        return "N/A (no sympy)", float("nan")
-    def R(x):
-        return Rational(int(round(2 * x)), 2)
-    val = CG(R(j1), R(m1), R(j2), R(m2), R(J), R(M)).doit()
-    return str(val), float(val)
+    fval = _cg_float(j1, m1, j2, m2, J, M)
+    return _exact_str(fval), fval
 
 def result_box(*items):
     pairs = "".join(
@@ -137,11 +178,8 @@ def warn(s):
 st.title("⚛️ Clebsch–Gordan Coefficients")
 st.markdown(
     "Coupling coefficients **⟨j₁m₁; j₂m₂ | JM⟩** for addition of angular momenta. "
-    "Exact symbolic results via sympy."
+    "Exact results via the Racah formula — no external dependencies required."
 )
-
-if not HAS_SYMPY:
-    warn("sympy not installed — exact results unavailable. `pip install sympy`")
 
 # ─── Background expander ──────────────────────────────────────────────────────
 
@@ -241,7 +279,7 @@ with tab1:
         )
 
     # Symmetry companions
-    if exact != "0" and HAS_SYMPY:
+    if exact != "0":
         with st.expander("Symmetry-related coefficients"):
             # Exchange symmetry
             ex_exact, ex_fval = cg(j2, m2, j1, m1, J, M)
